@@ -1,0 +1,165 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+		x:Class="APBConfigManager.UI.MainWindow"
+		Title="{Binding WindowTitle}"
+        MinWidth="570"
+        MinHeight="400"
+        Width="820"
+        Height="550">
+    
+	<!-- Auto = Scale to content -->
+	<!-- * = Fill remaining space -->
+	<!-- Multiple * = divide evenly between each * -->
+	<Grid Margin="10, 10, 10, 10" 
+          RowDefinitions="Auto, Auto, *, Auto, Auto, Auto, Auto"
+          ColumnDefinitions="*, *, 3*, Auto">
+
+        <!-- Top area -->
+        <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4">APB Path</Label>
+        <TextBox Grid.Row="1" 
+                 Grid.Column="0" 
+                 Grid.ColumnSpan="3" 
+                 Text="{Binding GamePath}"
+                 IsReadOnly="True"
+                 ToolTip.Tip="The APB install the profiles will be applied to."
+                 Watermark="APB install directory not set!"/>
+        <Button Margin="10, 0, 0, 0" 
+                Grid.Row="1" 
+                Grid.Column="3"
+                Command="{Binding OnLocateCommand}">
+            Locate...
+        </Button>
+
+        <!-- Center area -->
+        <ListBox Grid.Row="2"
+                 Grid.Column="0"
+                 Grid.ColumnSpan="2"
+                 Grid.RowSpan="2"
+                 Margin="0 10 0 10"
+                 Items="{Binding Profiles}"
+                 SelectedItem="{Binding SelectedProfile}"
+                 IsEnabled="{Binding IsGamePathValid}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="{Binding Name}"/>
+                        <Label Content="*" IsVisible="{Binding IsDirty}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <ScrollViewer Margin="10" 
+                      Grid.Row="2" 
+                      Grid.Column="2" 
+                      Grid.ColumnSpan="3">
+            
+            <StackPanel>
+                <Label>Profile name</Label>
+                <TextBox Text="{Binding SelectedProfile.Name}"
+                         IsEnabled="{Binding CanEditSelectedProfile}"
+                         Watermark="Enter name of profile..."/>
+                
+                <Separator Height="10"/>
+
+                <Label>APB Launch Arguments</Label>
+                <TextBox Text="{Binding SelectedProfile.GameArgs}"
+                         IsEnabled="{Binding CanEditSelectedProfile}"
+                         Watermark="-language=1031"
+                         ToolTip.Tip="These arguments will be passed to the APB executable. For example, if you want to use Flaws' localization, you can specify '-language=1031' here."/>
+           </StackPanel>
+            
+        </ScrollViewer>
+
+        <StackPanel Margin="10" 
+                    Grid.Row="3" 
+                    Grid.Column="2" 
+                    Grid.ColumnSpan="2"
+                    Orientation="Horizontal">
+            <Button Margin="0 0 10 0" 
+                    Command="{Binding OnDeleteProfileCommand}"
+                    IsEnabled="{Binding CanEditSelectedProfile}">
+                Delete
+            </Button>
+
+            <Button Margin="0 0 10 0"
+                    Command="{Binding OnSaveProfileCommand}"   
+                    IsEnabled="{Binding CanEditSelectedProfile}">
+                Save
+            </Button>
+
+            <Button Margin="0 0 10 0"
+                    Command="{Binding OnActivateProfileCommand}"
+                    IsEnabled="{Binding IsGamePathValid}">
+                Activate
+            </Button>
+
+            <Button Margin="0 0 10 0"
+                    ToolTip.Tip="Creates a shortcut in the given directory for the currently selected profile."
+                    Command="{Binding OnCreateProfileShortcutCommand}"
+                    IsEnabled="{Binding IsGamePathValid}">
+                Create Shortcut...
+            </Button>
+            
+        </StackPanel>
+        
+        <!-- Bottom area -->
+        <StackPanel Grid.Row="4"
+                Grid.Column="0"
+                Grid.ColumnSpan="2"
+                Orientation="Horizontal">
+            <Button Margin="0 0 10 0"
+                    ToolTip.Tip="Creates a new configuration profile based on the current APB configuration files."
+                    Command="{Binding OnCreateProfileCommand}"
+                    IsEnabled="{Binding IsGamePathValid}">
+                Create Profile
+            </Button>
+            <Button Margin="0 0 10 0"
+                    ToolTip.Tip="Creates a new profile based on the configuration files in the given APB installation directory."
+                    Command="{Binding OnImportProfileCommand}"
+                    IsEnabled="{Binding IsGamePathValid}">
+                Import Profile...
+            </Button>
+        </StackPanel>
+
+        <StackPanel
+            Grid.Row="4"
+            Grid.Column="3"
+            Grid.ColumnSpan="2"
+            Orientation="Horizontal">
+
+            <Button Command="{Binding OnRunAdvLauncherCommand}"
+                    IsEnabled="{Binding IsGamePathValid}"
+                    Margin="0 0 10 0">
+                Run Adv. Launcher
+            </Button>
+            
+            <Button Command="{Binding OnRunAPBCommand}"
+                    IsEnabled="{Binding IsGamePathValid}">
+                Run APB
+            </Button>
+            
+        </StackPanel>
+
+        <!-- Status area -->
+        <Label FontSize="12"
+               Grid.Row="5"
+               Grid.Column="0"
+               Grid.ColumnSpan="5"
+               IsEnabled="{Binding IsGamePathValid}"
+               Margin="0 10 0 0"
+               Content="{Binding StatusText}">
+        </Label>
+
+        <ProgressBar Grid.Row="5"
+                     Grid.Column="2"
+                     Grid.ColumnSpan="2" 
+                     Margin="10 10 0 0"
+                     IsIndeterminate="{Binding IsBusy}"
+                     Value="0"/>
+	</Grid>
+  
+</Window>
