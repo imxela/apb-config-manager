@@ -166,7 +166,6 @@ namespace APBConfigManager
             Process.Start(startInfo);
         }
 
-        // Todo: Rename to "SaveProfilesToDisk()" ?
         private void SyncJsonDatabase()
         {
             string jsonData = JsonConvert.SerializeObject(_profiles);

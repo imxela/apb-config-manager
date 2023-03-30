@@ -3,7 +3,7 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
-		x:Class="APBConfigManager.UI.MainWindow"
+		x:Class="APBConfigManager.UI.Views.MainWindow"
 		Title="{Binding WindowTitle}"
         MinWidth="570"
         MinHeight="400"

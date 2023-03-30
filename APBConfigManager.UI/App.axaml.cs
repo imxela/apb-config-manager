@@ -2,11 +2,12 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using APBConfigManager.UI.ViewModels;
+using APBConfigManager.UI.Views;
 using System;
 
 namespace APBConfigManager.UI;
 
-public partial class App : Avalonia.Application
+public partial class App : Application
 {
     public override void Initialize()
     {

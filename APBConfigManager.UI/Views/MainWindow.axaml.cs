@@ -1,7 +1,7 @@
 using APBConfigManager.UI.ViewModels;
 using Avalonia.Controls;
 
-namespace APBConfigManager.UI;
+namespace APBConfigManager.UI.Views;
 
 public partial class MainWindow : Window
 {

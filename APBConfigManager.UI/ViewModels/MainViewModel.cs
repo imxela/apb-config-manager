@@ -289,7 +289,6 @@ namespace APBConfigManager.UI.ViewModels
             IsBusy = false;
         }
 
-        // Todo: Move this somewhere else?
         public void OnRunAdvLauncherCommand()
         {
             ProcessStartInfo startInfo = new ProcessStartInfo();
