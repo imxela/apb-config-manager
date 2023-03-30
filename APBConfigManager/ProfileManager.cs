@@ -33,18 +33,13 @@ namespace APBConfigManager
         {
             _profiles = ReadProfilesFromDisk();
 
-            // If no symlink has been made, this is probably a first-time
-            // run, so we make sure to back it up to the Backup profile.
-            // Todo: Check if the "backup" profile already exists, if
-            //       yes then DO NOT overwrite it here!
+            // If no symlink exists this is likely a first-time run, so we
+            // backup the current configuration to a backup profile before
+            // creating one.
+
             if (Directory.Exists(AppConfig.GameConfigDirPath) && 
                 !IsSymlink(AppConfig.GameConfigDirPath))
             {
-                // Todo: Find a better way of handling protected profiles
-                //       Maybe dont allow new profiles with the same name
-                //       as protected profiels to be created? This would
-                //       effectively make the names of these protected
-                //       profiles reserved, making the below code safe.
                 CopyGameConfigToProfile(GetProfilesByName("Backup")[0].id);
 
                 Profile? baProfile = null;
@@ -196,7 +191,7 @@ namespace APBConfigManager
             File.WriteAllText(AppConfig.ProfileConfigFilepath, jsonData);
         }
 
-        public List<Profile> ReadProfilesFromDisk()
+        private List<Profile> ReadProfilesFromDisk()
         {
             string json = File.OpenText(AppConfig.ProfileConfigFilepath).ReadToEnd();
 
@@ -242,9 +237,6 @@ namespace APBConfigManager
         /// </summary>
         public bool CreateDesktopShortcutForProfile(Profile profile, string shortcutFilepath)
         {
-            // string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            // string shortcutFilepath = path + "\\APB Profile - " + profile.name + ".lnk";
-
             if (File.Exists(shortcutFilepath))
                 File.Delete(shortcutFilepath);
 

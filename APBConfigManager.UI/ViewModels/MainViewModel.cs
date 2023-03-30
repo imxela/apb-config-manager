@@ -229,8 +229,6 @@ namespace APBConfigManager.UI.ViewModels
             else
                 SelectedProfile = Profiles[Profiles.Count - 1];
 
-            ProfileManager.Instance.DeleteDesktopShortcutForProfile(SelectedProfile.Profile);
-
             IsBusy = false;
         }
 
