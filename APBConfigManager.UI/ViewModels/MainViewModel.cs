@@ -283,7 +283,7 @@ namespace APBConfigManager.UI.ViewModels
                 return;
             }
 
-            ProfileManager.Instance.CreateDesktopShortcutForProfile(SelectedProfile.Profile, result);
+            ProfileManager.Instance.CreateDesktopShortcutForProfile(SelectedProfile.Id, result);
 
             IsBusy = false;
         }

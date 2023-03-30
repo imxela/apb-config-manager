@@ -79,30 +79,34 @@ namespace APBConfigManager
             return profile;
         }
 
-        /// <summary>
-        /// Returns false if the specified profile does not exist.
-        /// </summary>
-        public bool DeleteProfile(Guid profileId)
+        /// <param name="profileId"></param>
+        /// <exception cref="DirectoryNotFoundException">
+        /// Throws DirectoryNotFoundException if the config directory
+        /// for the profile corresponding with the specified GUID
+        /// does not exist.
+        /// </exception>
+        public void DeleteProfile(Guid profileId)
         {
-            Profile? match = GetProfileById(profileId);
-            if (match == null) return false;
-
-            _profiles.Remove(match);
+            Profile profile = GetProfileById(profileId);
+            _profiles.Remove(profile);
 
             if (!Directory.Exists(AppConfig.ProfileConfigDirPath + profileId.ToString()))
-                return false;
+            {
+                throw new DirectoryNotFoundException(
+                    "Could not create shortcut because the directory for " +
+                    "the specified profile GUID is missing");
+            }
 
             Directory.Delete(AppConfig.ProfileConfigDirPath + profileId, true);
 
             SyncJsonDatabase();
-
-            return true;
         }
 
-        /// <summary>
-        /// Returns false if the specified profile does not exist.
-        /// </summary>
-        public bool UpdateProfile(Profile newProfileData)
+        /// <exception cref="ProfileNotFoundException">
+        /// Throws ProfileNotFoundException if the specified GUID does not
+        /// correspond to an existing profile.
+        /// </exception>
+        public void UpdateProfile(Profile newProfileData)
         {
             for (int i = 0; i < _profiles.Count; i++)
             {
@@ -110,11 +114,14 @@ namespace APBConfigManager
                 {
                     _profiles[i] = newProfileData;
                     SyncJsonDatabase();
-                    return true;
+
+                    return;
                 }
             }
 
-            return false;
+            throw new ProfileNotFoundException(
+                "Could not delete profile because no profile corresponding to" +
+                "the specified GUID exists. ");
         }
 
         /// <summary>
@@ -131,7 +138,9 @@ namespace APBConfigManager
                 }
             }
 
-            throw new ProfileNotFoundException($"The specified GUID ({id}) does not match any existing profiles.");
+            throw new ProfileNotFoundException(
+                $"Could not retrieve profile because no profile " +
+                $"corresponding with the specified GUID exists.");
         }
 
         /// <summary>
@@ -199,8 +208,19 @@ namespace APBConfigManager
                 new List<Profile>();
         }
 
+        /// <exception cref="ProfileNotFoundException">
+        /// Throws ProfileNotFoundException if the specified GUID does not
+        /// correspond to an existing profile.
+        /// </exception>
         public void CopyGameConfigToProfile(Guid profileId)
         {
+            if (!DoesProfileWithIdExist(profileId))
+            {
+                throw new ProfileNotFoundException(
+                    "Can not copy game configuration to profile because" +
+                    "no profile with a corresponding GUID exists.");
+            }
+
             string[] files = Directory.GetFiles(AppConfig.GameConfigDirPath, "*", SearchOption.AllDirectories);
 
             foreach (string file in files)
@@ -219,8 +239,20 @@ namespace APBConfigManager
         /// from the APB config directory (APBGame/Config) to the config
         /// directory of the specified config profile.
         /// </summary>
+        /// <exception cref="ProfileNotFoundException">
+        /// Throws ProfileNotFoundException if the specified GUID does not
+        /// correspond to an existing profile.
+        /// </exception>
         public void ActivateProfile(Guid profileId)
         {
+            if (!DoesProfileWithIdExist(profileId))
+            {
+                throw new ProfileNotFoundException(
+                    "Can not activate profile with the specified GUID " +
+                    "because no profile with a corrsponding " +
+                    "GUID exists.");
+            }
+
             // Delete previous symlink if one exists
             if (IsSymlink(AppConfig.GameConfigDirPath))
                 Directory.Delete(AppConfig.GameConfigDirPath);
@@ -235,11 +267,21 @@ namespace APBConfigManager
         /// already exists in the given location. Returns false if the 
         /// shortcut could not be created.
         /// </summary>
-        public bool CreateDesktopShortcutForProfile(Profile profile, string shortcutFilepath)
+        /// <exception cref="ProfileNotFoundException">
+        /// Throws ProfileNotFoundException if the specified GUID does not
+        /// correspond to an existing profile.
+        /// </exception>
+        public bool CreateDesktopShortcutForProfile(Guid profileId, string shortcutFilepath)
         {
+            if (!DoesProfileWithIdExist(profileId))
+            {
+                throw new ProfileNotFoundException(
+                    "Can not create profile shortcut with the specified GUID " +
+                    "because no profile with a corrsponding GUID exists.");
+            }
+
             if (File.Exists(shortcutFilepath))
                 File.Delete(shortcutFilepath);
-
 
             ProcessModule? procMod = Process.GetCurrentProcess().MainModule;
             if (procMod == null || procMod.FileName == null)
@@ -256,7 +298,7 @@ namespace APBConfigManager
                 return false;
 
             shortcut.TargetPath = targetPath;
-            shortcut.Arguments = profile.id.ToString();
+            shortcut.Arguments = profileId.ToString();
             shortcut.Save();
 
             return true;
