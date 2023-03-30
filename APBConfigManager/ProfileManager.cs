@@ -3,6 +3,13 @@ using System.Diagnostics;
 
 namespace APBConfigManager
 {
+    public class ProfileNotFoundException : Exception
+    {
+        public ProfileNotFoundException() { }
+        public ProfileNotFoundException(string message) : base(message) { }
+        public ProfileNotFoundException(string message, Exception inner) : base(message, inner) { }
+    }
+
     public class ProfileManager
     {
         private static ProfileManager? _instance;
@@ -117,8 +124,9 @@ namespace APBConfigManager
 
         /// <summary>
         /// Returns the profile matching the specified ID.
+        /// Throws a KeyNotFoundException if no profile with the specified ID exists.
         /// </summary>
-        public Profile? GetProfileById(Guid id)
+        public Profile GetProfileById(Guid id)
         {
             for (int i = 0; i < _profiles.Count; i++)
             {
@@ -128,7 +136,23 @@ namespace APBConfigManager
                 }
             }
 
-            return null;
+            throw new ProfileNotFoundException($"The specified GUID ({id}) does not match any existing profiles.");
+        }
+
+        /// <summary>
+        /// Returns true if a profile with the given ID exists
+        /// </summary>
+        public bool DoesProfileWithIdExist(Guid id)
+        {
+            for (int i = 0; i < _profiles.Count; i++)
+            {
+                if (_profiles[i].id == id)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -244,15 +268,6 @@ namespace APBConfigManager
             shortcut.Save();
 
             return true;
-        }
-
-        public void DeleteDesktopShortcutForProfile(Profile profile)
-        {
-            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            string shortcutFilepath = desktopPath + "\\APB Profile - " + profile.name + ".lnk";
-
-            if (File.Exists(shortcutFilepath))
-                File.Delete(shortcutFilepath);
         }
 
         /// <summary>
