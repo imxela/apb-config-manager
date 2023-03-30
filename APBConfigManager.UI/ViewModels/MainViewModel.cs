@@ -202,17 +202,18 @@ namespace APBConfigManager.UI.ViewModels
             IsBusy = false;
         }
 
-        public void OnDeleteProfileCommand()
+        public async void OnDeleteProfileCommand()
         {
             if (SelectedProfile == null)
                 return;
 
             if (SelectedProfile.Id == Guid.Parse(AppConfig.ActiveProfile))
             {
-                // Todo: Display error dialog box:
-                //       Unable to delete the profile as it is currently active!
-                //       Please activate a different profile before deleting this one.
-                throw new NotImplementedException();
+                var messageBox = MessageBox.Avalonia.MessageBoxManager
+                    .GetMessageBoxStandardWindow("ERROR", "Deleting the active profile is not allowed!\nActivate a different profile and try again.");
+                await messageBox.ShowDialog(_window);
+
+                return;
             }
 
             IsBusy = true;
