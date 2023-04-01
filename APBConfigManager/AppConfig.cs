@@ -49,7 +49,7 @@ namespace APBConfigManager
         {
             get
             {
-                return "/Binaries/APB.exe";
+                return "\\Binaries\\APB.exe";
             }
         }
 
@@ -65,7 +65,7 @@ namespace APBConfigManager
         {
             get
             {
-                return GamePath + "/Advanced APB Launcher.exe";
+                return GamePath + "\\Advanced APB Launcher.exe";
             }
         }
 
@@ -98,7 +98,15 @@ namespace APBConfigManager
         {
             get
             {
-                return AppRootDir + "/config.json";
+                return AppRootDir + "\\config.json";
+            }
+        }
+
+        public static string RelativeGameConfigDirPath
+        {
+            get
+            {
+                return "\\APBGame\\Config\\";
             }
         }
 
@@ -106,7 +114,7 @@ namespace APBConfigManager
         {
             get
             {
-                return GamePath + "/APBGame/Config/";
+                return GamePath + RelativeGameConfigDirPath;
             }
         }
 
@@ -114,7 +122,7 @@ namespace APBConfigManager
         {
             get
             {
-                return AppRootDir + "/Profiles/";
+                return AppRootDir + "\\Profiles\\";
             }
         }
 
