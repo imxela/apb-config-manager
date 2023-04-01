@@ -98,7 +98,7 @@ namespace APBConfigManager.UI.ViewModels
                     AppConfig.GamePath = "Game path not set!";
                     _isGamePathValid = false;
                 }
-                else if (!File.Exists(value + AppConfig.GameRelativeExePath))
+                else if (!ProfileManager.IsValidGamePath(value))
                 {
                     AppConfig.GamePath = "The selected directory is not a valid APB install!";
                     _isGamePathValid = false;

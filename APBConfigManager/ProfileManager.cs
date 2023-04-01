@@ -304,6 +304,16 @@ namespace APBConfigManager
             return true;
         }
 
+
+        /// <summary>
+        /// Returns true of the specified file is a valid path to an APB
+        /// install directory by checking if the game executable exists.
+        /// </summary>
+        public static bool IsValidGamePath(string path)
+        {
+            return File.Exists(path + AppConfig.GameRelativeExePath);
+        }
+
         /// <summary>
         /// Returns true if the specified file is a symbolic link.
         /// Will return false if the file does not exist.
