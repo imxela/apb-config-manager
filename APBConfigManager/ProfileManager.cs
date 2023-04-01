@@ -219,8 +219,22 @@ namespace APBConfigManager
         /// Throws ProfileNotFoundException if the specified GUID does not
         /// correspond to an existing profile.
         /// </exception>
-        public void CopyGameConfigToProfile(Guid profileId)
+        /// <exception cref="InvalidGamePathException">
+        /// Throws InvalidGamePathException if the specified path does not
+        /// lead to a valid APB: Reloaded installation directory.
+        /// </exception>
+        public void CopyGameConfigToProfile(Guid profileId, string? path = null)
         {
+            if (path == null)
+                path = AppConfig.GamePath;
+
+            if (!IsValidGamePath(path))
+            {
+                throw new InvalidGamePathException(
+                    "The specified path does not lead to a valid " +
+                    "APB: Reloaded installation directory");
+            }
+
             if (!DoesProfileWithIdExist(profileId))
             {
                 throw new ProfileNotFoundException(
@@ -228,12 +242,13 @@ namespace APBConfigManager
                     "no profile with a corresponding GUID exists.");
             }
 
-            string[] files = Directory.GetFiles(AppConfig.GameConfigDirPath, "*", SearchOption.AllDirectories);
+            string configDirPath = path + AppConfig.RelativeGameConfigDirPath;
+            string[] files = Directory.GetFiles(configDirPath, "*", SearchOption.AllDirectories);
 
             foreach (string file in files)
             {
-                string relativeFilePath = Path.GetRelativePath(AppConfig.GameConfigDirPath, file);
-                string profileFilePath = AppConfig.ProfileConfigDirPath + profileId.ToString() + "/" + relativeFilePath;
+                string relativeFilePath = Path.GetRelativePath(configDirPath, file);
+                string profileFilePath = GetProfileDirById(profileId) + "\\" + relativeFilePath;
 
                 new FileInfo(profileFilePath).Directory?.Create();
 
