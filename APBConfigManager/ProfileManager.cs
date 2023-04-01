@@ -151,6 +151,20 @@ namespace APBConfigManager
         }
 
         /// <summary>
+        /// Returns the directory corresponding to the profile with the 
+        /// given GUID.
+        /// </summary>
+        public string GetProfileDirById(Guid profileId)
+        {
+            if (!DoesProfileWithIdExist(profileId))
+                throw new ProfileNotFoundException(
+                    "The specified GUID does not correspond with an " +
+                    "existing profile.");
+
+            return AppConfig.ProfileConfigDirPath + profileId.ToString();
+        }
+
+        /// <summary>
         /// Returns true if a profile with the given ID exists
         /// </summary>
         public bool DoesProfileWithIdExist(Guid id)
