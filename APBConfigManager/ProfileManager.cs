@@ -10,6 +10,13 @@ namespace APBConfigManager
         public ProfileNotFoundException(string message, Exception inner) : base(message, inner) { }
     }
 
+    public class InvalidGamePathException : Exception
+    {
+        public InvalidGamePathException() { }
+        public InvalidGamePathException(string message) : base(message) { }
+        public InvalidGamePathException(string message, Exception inner) : base(message, inner) { }
+    }
+
     public class ProfileManager
     {
         private static ProfileManager? _instance;
