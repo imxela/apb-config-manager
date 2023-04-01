@@ -1,11 +1,12 @@
 ﻿using APBConfigManager.UI.Model;
 using Avalonia.Controls;
 using JetBrains.Annotations;
+using MessageBox.Avalonia.DTO;
+using MessageBox.Avalonia.Models;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace APBConfigManager.UI.ViewModels
@@ -347,6 +348,24 @@ namespace APBConfigManager.UI.ViewModels
             IsBusy = false;
         }
 
+        public void OnOpenGameDirInExplorerCommand()
+        {
+            OpenInExplorer(GamePath);
+        }
+
+        public void OnOpenProfileDirInExplorerCommand()
+        {
+            if (SelectedProfile == null)
+                throw new ProfileNotFoundException(
+                    "An attempt was made to open the directory of the " +
+                    "currently selected profile but no profile is selected");
+
+            string path = ProfileManager.Instance
+                .GetProfileDirById(SelectedProfile.Id);
+
+            OpenInExplorer(path);
+        }
+
         public void OnRunAdvLauncherCommand()
         {
             ProcessStartInfo startInfo = new ProcessStartInfo();
@@ -362,6 +381,11 @@ namespace APBConfigManager.UI.ViewModels
                 return;
 
             ProfileManager.Instance.RunGameWithProfile(SelectedProfile.Id);
+        }
+
+        private void OpenInExplorer(string path)
+        {
+            Process.Start("explorer.exe", path);
         }
     }
 }

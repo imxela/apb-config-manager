@@ -2,17 +2,14 @@
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="500"
+		mc:Ignorable="d" d:DesignWidth="730" d:DesignHeight="600"
 		x:Class="APBConfigManager.UI.Views.MainWindow"
 		Title="{Binding WindowTitle}"
-        MinWidth="570"
-        MinHeight="400"
+        MinWidth="730"
+        MinHeight="500"
         Width="820"
         Height="550">
     
-	<!-- Auto = Scale to content -->
-	<!-- * = Fill remaining space -->
-	<!-- Multiple * = divide evenly between each * -->
 	<Grid Margin="10, 10, 10, 10" 
           RowDefinitions="Auto, Auto, *, Auto, Auto, Auto, Auto"
           ColumnDefinitions="*, *, 3*, Auto">
@@ -26,12 +23,24 @@
                  IsReadOnly="True"
                  ToolTip.Tip="The APB install the profiles will be applied to."
                  Watermark="APB install directory not set!"/>
-        <Button Margin="10, 0, 0, 0" 
-                Grid.Row="1" 
-                Grid.Column="3"
-                Command="{Binding OnLocateCommand}">
-            Locate...
-        </Button>
+
+        <StackPanel Orientation="Horizontal"
+                    Margin="10, 0, 10, 0"
+                    Grid.Row="1"
+                    Grid.Column="3"
+                    Grid.ColumnSpan="2">
+            
+            <Button Command="{Binding OnLocateCommand}">
+                Locate...
+            </Button>
+
+            <Button Command="{Binding OnOpenGameDirInExplorerCommand}"
+                    Margin="10 0 0 0"
+                    IsEnabled="{Binding IsGamePathValid}">
+                Open in Explorer
+            </Button>
+            
+        </StackPanel>
 
         <!-- Center area -->
         <ListBox Grid.Row="2"
@@ -95,6 +104,12 @@
                     Command="{Binding OnActivateProfileCommand}"
                     IsEnabled="{Binding IsGamePathValid}">
                 Activate
+            </Button>
+
+            <Button Command="{Binding OnOpenProfileDirInExplorerCommand}"
+                    Margin="0 0 10 0"
+                    IsEnabled="{Binding CanEditSelectedProfile}">
+                Open in Explorer
             </Button>
 
             <Button Margin="0 0 10 0"
