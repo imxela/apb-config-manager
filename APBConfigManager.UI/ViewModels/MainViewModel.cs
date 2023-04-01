@@ -202,6 +202,65 @@ namespace APBConfigManager.UI.ViewModels
             IsBusy = false;
         }
 
+        public async void OnImportProfileCommand()
+        {
+            IsBusy = true;
+            StatusText = "Importing profile...";
+
+            OpenFolderDialog dialog = new OpenFolderDialog();
+            string? path = await dialog.ShowAsync(_window);
+
+            if (path == null)
+                return;
+
+            if (path == GamePath)
+            {
+                var messageBoxError = MessageBox.Avalonia.MessageBoxManager
+                    .GetMessageBoxStandardWindow("ERROR", 
+                        "Importing the main APB: Reloaded config is not " +
+                        "allowed - create a new profile instead.");
+
+                await messageBoxError.ShowDialog(_window);
+
+                IsBusy = false;
+                return;
+            }
+
+            var messageBox = MessageBox.Avalonia.MessageBoxManager
+                .GetMessageBoxCustomWindow(new MessageBoxCustomParams
+                {
+                    ContentTitle = "Question",
+                    ContentMessage = "Would you like to delete the install after the profile has been imported?",
+                    Icon = MessageBox.Avalonia.Enums.Icon.Question,
+                    ButtonDefinitions = new[]
+                    {
+                        new ButtonDefinition { Name = "Yes" },
+                        new ButtonDefinition { Name = "No", IsCancel = true, IsDefault = true }
+                    },
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                });
+
+            bool shouldDelete = await messageBox.ShowDialog(_window) == "Yes";
+
+            try
+            {
+                Profile profile = ProfileManager.Instance.ImportProfile(path, shouldDelete);
+                ProfileModel profileModel = new ProfileModel(profile);
+                Profiles.Add(profileModel);
+            }
+            catch (InvalidGamePathException) 
+            {
+                var messageBoxError = MessageBox.Avalonia.MessageBoxManager
+                    .GetMessageBoxStandardWindow("ERROR", "The chosen path is not a valid APB: Reloaded installation.");
+                await messageBoxError.ShowDialog(_window);
+
+                IsBusy = false;
+                return;
+            }
+
+            IsBusy = false;
+        }
+
         public async void OnDeleteProfileCommand()
         {
             if (SelectedProfile == null)

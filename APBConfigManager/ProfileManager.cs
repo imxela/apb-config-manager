@@ -86,6 +86,36 @@ namespace APBConfigManager
             return profile;
         }
 
+        /// <summary>
+        /// Creates a new configuration profile and imports configuration
+        /// files from a pre-existing APB: Reloaded install.
+        /// </summary>
+        /// <param name="path">
+        /// Path to the APB: Reloaded installation directory to copy the
+        /// configuration files from.
+        /// </param>
+        /// <param name="delete">
+        /// If true, the specified APB: Reloaded install will be permanently
+        /// deleted after  the configuration files have been copied to
+        /// the specified profile.
+        /// </param>
+        /// <returns>The newly imported profile</returns>
+        /// <exception cref="InvalidGamePathException">
+        /// Throws InvalidGamePathException if the specified path does not
+        /// lead to a valid APB: Reloaded installation directory.
+        /// </exception>
+        public Profile ImportProfile(string path, bool delete = false)
+        {
+            Profile profile = CreateProfile("Imported Profile");
+
+            CopyGameConfigToProfile(profile.id, path);
+
+            if (delete)
+                Directory.Delete(path, true);
+
+            return profile;
+        }
+
         /// <param name="profileId"></param>
         /// <exception cref="DirectoryNotFoundException">
         /// Throws DirectoryNotFoundException if the config directory
