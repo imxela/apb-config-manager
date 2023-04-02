@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using MessageBox.Avalonia.DTO;
 using MessageBox.Avalonia.Models;
 using System;
+using System.IO;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -366,19 +367,40 @@ namespace APBConfigManager.UI.ViewModels
             OpenInExplorer(path);
         }
 
-        public void OnRunAdvLauncherCommand()
+        public async void OnRunAdvLauncherCommand()
         {
             ProcessStartInfo startInfo = new ProcessStartInfo();
             startInfo.FileName = AppConfig.AdvLauncherExecutablePath;
             startInfo.WorkingDirectory = GamePath;
 
+            if (IsExecutableRunning(AppConfig.AdvLauncherExecutablePath))
+            {
+                var messageBox = MessageBox.Avalonia.MessageBoxManager
+                    .GetMessageBoxStandardWindow("ERROR", "An instance of APB Advanced Launcher is already running.");
+
+                await messageBox.ShowDialog(_window);
+
+                return;
+            }
+
             Process.Start(startInfo);
         }
 
-        public void OnRunAPBCommand()
+        public async void OnRunAPBCommand()
         {
             if (SelectedProfile == null)
                 return;
+
+            // If an instance of APB is already running, abort and inform
+            if (IsExecutableRunning(AppConfig.GameExecutableFilepath))
+            {
+                var messageBox = MessageBox.Avalonia.MessageBoxManager
+                    .GetMessageBoxStandardWindow("ERROR", "An instance APB: Reloaded is already running.");
+
+                await messageBox.ShowDialog(_window);
+
+                return;
+            }
 
             ProfileManager.Instance.RunGameWithProfile(SelectedProfile.Id);
         }
@@ -386,6 +408,12 @@ namespace APBConfigManager.UI.ViewModels
         private void OpenInExplorer(string path)
         {
             Process.Start("explorer.exe", path);
+        }
+
+        private bool IsExecutableRunning(string path)
+        {
+            string processName = Path.GetFileNameWithoutExtension(path);
+            return Process.GetProcessesByName(processName).Length > 0;
         }
     }
 }
