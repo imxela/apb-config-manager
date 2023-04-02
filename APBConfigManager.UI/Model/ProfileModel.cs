@@ -58,18 +58,16 @@ namespace APBConfigManager.UI.Model
             }
         }
 
-        private string _gameArgs = string.Empty;
-
         public string GameArgs
         {
             get
             {
-                return _gameArgs;
+                return _profile.gameArgs;
             }
 
             set
             {
-                _gameArgs = value;
+                _profile.gameArgs = value;
                 IsDirty = true;
                 OnPropertyChanged(nameof(GameArgs));
             }
