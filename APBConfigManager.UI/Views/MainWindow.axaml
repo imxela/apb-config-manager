@@ -30,15 +30,13 @@
                     Grid.Column="3"
                     Grid.ColumnSpan="2">
             
-            <Button Command="{Binding OnLocateCommand}">
-                Locate...
-            </Button>
+            <Button Content="Locate..."
+                    Command="{Binding OnLocateCommand}"/>
 
-            <Button Command="{Binding OnOpenGameDirInExplorerCommand}"
+            <Button Content="Open in Explorer"
+                    Command="{Binding OnOpenGameDirInExplorerCommand}"
                     Margin="10 0 0 0"
-                    IsEnabled="{Binding IsGamePathValid}">
-                Open in Explorer
-            </Button>
+                    IsEnabled="{Binding IsGamePathValid}"/>
             
         </StackPanel>
 
@@ -67,19 +65,21 @@
                       Grid.ColumnSpan="3">
             
             <StackPanel>
-                <Label>Profile name</Label>
+                
+                <Label Content="Profile Name"/>
                 <TextBox Text="{Binding SelectedProfile.Name}"
                          IsEnabled="{Binding CanEditSelectedProfile}"
                          Watermark="Enter name of profile..."/>
                 
                 <Separator Height="10"/>
 
-                <Label>APB Launch Arguments</Label>
+                <Label Content="APB Launch Arguments"/>
                 <TextBox Text="{Binding SelectedProfile.GameArgs}"
                          IsEnabled="{Binding CanEditSelectedProfile}"
                          Watermark="-language=1031"
                          ToolTip.Tip="These arguments will be passed to the APB executable. For example, if you want to use Flaws' localization, you can specify '-language=1031' here."/>
-           </StackPanel>
+           
+            </StackPanel>
             
         </ScrollViewer>
 
@@ -88,36 +88,32 @@
                     Grid.Column="2" 
                     Grid.ColumnSpan="2"
                     Orientation="Horizontal">
-            <Button Margin="0 0 10 0" 
+            
+            <Button Content="Delete"
                     Command="{Binding OnDeleteProfileCommand}"
-                    IsEnabled="{Binding CanEditSelectedProfile}">
-                Delete
-            </Button>
+                    Margin="0 0 10 0" 
+                    IsEnabled="{Binding CanEditSelectedProfile}"/>
 
-            <Button Margin="0 0 10 0"
+            <Button Content="Save"
                     Command="{Binding OnSaveProfileCommand}"   
-                    IsEnabled="{Binding CanEditSelectedProfile}">
-                Save
-            </Button>
-
-            <Button Margin="0 0 10 0"
-                    Command="{Binding OnActivateProfileCommand}"
-                    IsEnabled="{Binding IsGamePathValid}">
-                Activate
-            </Button>
-
-            <Button Command="{Binding OnOpenProfileDirInExplorerCommand}"
                     Margin="0 0 10 0"
-                    IsEnabled="{Binding CanEditSelectedProfile}">
-                Open in Explorer
-            </Button>
+                    IsEnabled="{Binding CanEditSelectedProfile}"/>
 
-            <Button Margin="0 0 10 0"
-                    ToolTip.Tip="Creates a shortcut in the given directory for the currently selected profile."
+            <Button Content="Activate"
+                    Command="{Binding OnActivateProfileCommand}"
+                    Margin="0 0 10 0"
+                    IsEnabled="{Binding IsGamePathValid}"/>
+
+            <Button Content="Open in Explorer"
+                    Command="{Binding OnOpenProfileDirInExplorerCommand}"
+                    Margin="0 0 10 0"
+                    IsEnabled="{Binding CanEditSelectedProfile}"/>
+
+            <Button Content="Create Shortcut..."
                     Command="{Binding OnCreateProfileShortcutCommand}"
-                    IsEnabled="{Binding IsGamePathValid}">
-                Create Shortcut...
-            </Button>
+                    ToolTip.Tip="Creates a shortcut in the given directory for the currently selected profile."
+                    Margin="0 0 10 0"
+                    IsEnabled="{Binding IsGamePathValid}"/>
             
         </StackPanel>
         
@@ -126,18 +122,19 @@
                 Grid.Column="0"
                 Grid.ColumnSpan="2"
                 Orientation="Horizontal">
-            <Button Margin="0 0 10 0"
-                    ToolTip.Tip="Creates a new configuration profile based on the current APB configuration files."
+            
+            <Button Content="Create Profile"
                     Command="{Binding OnCreateProfileCommand}"
-                    IsEnabled="{Binding IsGamePathValid}">
-                Create Profile
-            </Button>
-            <Button Margin="0 0 10 0"
-                    ToolTip.Tip="Creates a new profile based on the configuration files in the given APB installation directory."
+                    ToolTip.Tip="Creates a new configuration profile based on the current APB configuration files."
+                    Margin="0 0 10 0"
+                    IsEnabled="{Binding IsGamePathValid}"/>
+            
+            <Button Content="Import Profile..."
                     Command="{Binding OnImportProfileCommand}"
-                    IsEnabled="{Binding IsGamePathValid}">
-                Import Profile...
-            </Button>
+                    ToolTip.Tip="Creates a new profile based on the configuration files in the given APB installation directory."
+                    Margin="0 0 10 0"
+                    IsEnabled="{Binding IsGamePathValid}"/>
+            
         </StackPanel>
 
         <StackPanel
@@ -146,16 +143,14 @@
             Grid.ColumnSpan="2"
             Orientation="Horizontal">
 
-            <Button Command="{Binding OnRunAdvLauncherCommand}"
+            <Button Content="Run Adv. Launcher"
+                    Command="{Binding OnRunAdvLauncherCommand}"
                     IsEnabled="{Binding IsGamePathValid}"
-                    Margin="0 0 10 0">
-                Run Adv. Launcher
-            </Button>
+                    Margin="0 0 10 0"/>
             
-            <Button Command="{Binding OnRunAPBCommand}"
-                    IsEnabled="{Binding IsGamePathValid}">
-                Run APB
-            </Button>
+            <Button Content="Run APB"
+                    Command="{Binding OnRunAPBCommand}"
+                    IsEnabled="{Binding IsGamePathValid}"/>
             
         </StackPanel>
 
