@@ -72,6 +72,12 @@
                          Watermark="Enter name of profile..."/>
                 
                 <Separator Height="10"/>
+                
+                <Label Content="Profile ID"/>
+                <TextBox Text="{Binding SelectedProfile.Id}"
+                         IsReadOnly="True"/>
+                
+                <Separator Height="10"/>
 
                 <Label Content="APB Launch Arguments"/>
                 <TextBox Text="{Binding SelectedProfile.GameArgs}"
