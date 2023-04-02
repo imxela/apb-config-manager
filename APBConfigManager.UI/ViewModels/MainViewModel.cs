@@ -1,8 +1,6 @@
 ﻿using APBConfigManager.UI.Model;
 using Avalonia.Controls;
 using JetBrains.Annotations;
-using MessageBox.Avalonia.DTO;
-using MessageBox.Avalonia.Models;
 using System;
 using System.IO;
 using System.Collections.ObjectModel;
@@ -217,32 +215,24 @@ namespace APBConfigManager.UI.ViewModels
 
             if (path == GamePath)
             {
-                var messageBoxError = MessageBox.Avalonia.MessageBoxManager
-                    .GetMessageBoxStandardWindow("ERROR", 
-                        "Importing the main APB: Reloaded config is not " +
-                        "allowed - create a new profile instead.");
-
-                await messageBoxError.ShowDialog(_window);
+                await new MessageBoxFactory()
+                    .Title("ERROR")
+                    .Message("Importing the main APB: Reloaded config is not allowed - create a new profile instead.")
+                    .Icon(MessageBoxIconType.Error)
+                    .Button("OK")
+                    .Show(_window);
 
                 IsBusy = false;
                 return;
             }
 
-            var messageBox = MessageBox.Avalonia.MessageBoxManager
-                .GetMessageBoxCustomWindow(new MessageBoxCustomParams
-                {
-                    ContentTitle = "Question",
-                    ContentMessage = "Would you like to delete the install after the profile has been imported?",
-                    Icon = MessageBox.Avalonia.Enums.Icon.Question,
-                    ButtonDefinitions = new[]
-                    {
-                        new ButtonDefinition { Name = "Yes" },
-                        new ButtonDefinition { Name = "No", IsCancel = true, IsDefault = true }
-                    },
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                });
-
-            bool shouldDelete = await messageBox.ShowDialog(_window) == "Yes";
+            bool shouldDelete = await new MessageBoxFactory()
+                .Title("Question")
+                .Message("Would you like to delete the install after the profile has been imported?")
+                .Icon(MessageBoxIconType.Error)
+                .Button("Yes")
+                .Button("No", true, true)
+                .Show(_window) == "Yes";
 
             try
             {
@@ -252,9 +242,12 @@ namespace APBConfigManager.UI.ViewModels
             }
             catch (InvalidGamePathException) 
             {
-                var messageBoxError = MessageBox.Avalonia.MessageBoxManager
-                    .GetMessageBoxStandardWindow("ERROR", "The chosen path is not a valid APB: Reloaded installation.");
-                await messageBoxError.ShowDialog(_window);
+                await new MessageBoxFactory()
+                    .Title("ERROR")
+                    .Message("The chosen path is not a valid APB: Reloaded installation.")
+                    .Icon(MessageBoxIconType.Error)
+                    .Button("OK")
+                    .Show(_window);
 
                 IsBusy = false;
                 return;
@@ -270,9 +263,12 @@ namespace APBConfigManager.UI.ViewModels
 
             if (SelectedProfile.Id == Guid.Parse(AppConfig.ActiveProfile))
             {
-                var messageBox = MessageBox.Avalonia.MessageBoxManager
-                    .GetMessageBoxStandardWindow("ERROR", "Deleting the active profile is not allowed!\nActivate a different profile and try again.");
-                await messageBox.ShowDialog(_window);
+                await new MessageBoxFactory()
+                    .Title("ERROR")
+                    .Message("Deleting the active profile is not allowed!\nActivate a different profile and try again.")
+                    .Icon(MessageBoxIconType.Error)
+                    .Button("OK")
+                    .Show(_window);
 
                 return;
             }
@@ -375,10 +371,12 @@ namespace APBConfigManager.UI.ViewModels
 
             if (IsExecutableRunning(AppConfig.AdvLauncherExecutablePath))
             {
-                var messageBox = MessageBox.Avalonia.MessageBoxManager
-                    .GetMessageBoxStandardWindow("ERROR", "An instance of APB Advanced Launcher is already running.");
-
-                await messageBox.ShowDialog(_window);
+                await new MessageBoxFactory()
+                    .Title("ERROR")
+                    .Message("An instance of APB Advanced Launcher is already running.")
+                    .Icon(MessageBoxIconType.Error)
+                    .Button("OK")
+                    .Show(_window);
 
                 return;
             }
@@ -398,6 +396,13 @@ namespace APBConfigManager.UI.ViewModels
                     .GetMessageBoxStandardWindow("ERROR", "An instance APB: Reloaded is already running.");
 
                 await messageBox.ShowDialog(_window);
+
+                await new MessageBoxFactory()
+                    .Title("ERROR")
+                    .Message("An instance of APB: Reloaded is already running.")
+                    .Icon(MessageBoxIconType.Error)
+                    .Button("OK")
+                    .Show(_window);
 
                 return;
             }
