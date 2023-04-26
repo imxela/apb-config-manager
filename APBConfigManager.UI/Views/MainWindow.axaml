@@ -21,7 +21,7 @@
                  Grid.ColumnSpan="3" 
                  Text="{Binding GamePath}"
                  IsReadOnly="True"
-                 ToolTip.Tip="The APB install the profiles will be applied to."
+                 ToolTip.Tip="The target APB install your profiles will apply to."
                  Watermark="APB install directory not set!"/>
 
         <StackPanel Orientation="Horizontal"
@@ -31,10 +31,12 @@
                     Grid.ColumnSpan="2">
             
             <Button Content="Locate..."
-                    Command="{Binding OnLocateCommand}"/>
+                    Command="{Binding OnLocateCommand}"
+                    ToolTip.Tip="Change the target APB install location."/>
 
             <Button Content="Open in Explorer"
                     Command="{Binding OnOpenGameDirInExplorerCommand}"
+                    ToolTip.Tip="Open the target APB install directory in Windows Explorer."
                     Margin="10 0 0 0"
                     IsEnabled="{Binding IsGamePathValid}"/>
             
@@ -83,7 +85,7 @@
                 <TextBox Text="{Binding SelectedProfile.GameArgs}"
                          IsEnabled="{Binding CanEditSelectedProfile}"
                          Watermark="-language=1031"
-                         ToolTip.Tip="These arguments will be passed to the APB executable. For example, if you want to use Flaws' localization, you can specify '-language=1031' here."/>
+                         ToolTip.Tip="Launch arguments to pass to the APB executable separated by spaces."/>
            
             </StackPanel>
             
@@ -98,26 +100,30 @@
             <Button Content="Delete"
                     Command="{Binding OnDeleteProfileCommand}"
                     Margin="0 0 10 0" 
-                    IsEnabled="{Binding CanEditSelectedProfile}"/>
+                    IsEnabled="{Binding CanEditSelectedProfile}"
+                    ToolTip.Tip="Delete the selected profile along with its configuration files."/>
 
             <Button Content="Save"
                     Command="{Binding OnSaveProfileCommand}"   
                     Margin="0 0 10 0"
-                    IsEnabled="{Binding CanEditSelectedProfile}"/>
+                    IsEnabled="{Binding CanEditSelectedProfile}"
+                    ToolTip.Tip="Save profile name and launch arguments. Configuration files are saved automatically."/>
 
             <Button Content="Activate"
                     Command="{Binding OnActivateProfileCommand}"
                     Margin="0 0 10 0"
-                    IsEnabled="{Binding IsGamePathValid}"/>
+                    IsEnabled="{Binding IsGamePathValid}"
+                    ToolTip.Tip="Activate the selected profile by writing it to your APB install."/>
 
             <Button Content="Open in Explorer"
                     Command="{Binding OnOpenProfileDirInExplorerCommand}"
                     Margin="0 0 10 0"
-                    IsEnabled="{Binding CanEditSelectedProfile}"/>
+                    IsEnabled="{Binding CanEditSelectedProfile}"
+                    ToolTip.Tip="Open the selected profile's config directory in Windows Explorer."/>
 
             <Button Content="Create Shortcut..."
                     Command="{Binding OnCreateProfileShortcutCommand}"
-                    ToolTip.Tip="Creates a shortcut in the given directory for the currently selected profile."
+                    ToolTip.Tip="Create a shortcut which automatically runs APB: Reloaded with the selected config profile."
                     Margin="0 0 10 0"
                     IsEnabled="{Binding IsGamePathValid}"/>
             
@@ -131,13 +137,13 @@
             
             <Button Content="Create Profile"
                     Command="{Binding OnCreateProfileCommand}"
-                    ToolTip.Tip="Creates a new configuration profile based on the current APB configuration files."
+                    ToolTip.Tip="Create a new profile based on the current target APB configuration files."
                     Margin="0 0 10 0"
                     IsEnabled="{Binding IsGamePathValid}"/>
             
             <Button Content="Import Profile..."
                     Command="{Binding OnImportProfileCommand}"
-                    ToolTip.Tip="Creates a new profile based on the configuration files in the given APB installation directory."
+                    ToolTip.Tip="Create a new profile based on the configuration files in a chosen APB installation directory. Optionally allows for deleting the imported APB installation."
                     Margin="0 0 10 0"
                     IsEnabled="{Binding IsGamePathValid}"/>
             
@@ -152,11 +158,13 @@
             <Button Content="Run Adv. Launcher"
                     Command="{Binding OnRunAdvLauncherCommand}"
                     IsEnabled="{Binding IsGamePathValid}"
-                    Margin="0 0 10 0"/>
+                    Margin="0 0 10 0"
+                    ToolTip.Tip="Runs APB Advanced Launcher so you can edit the currently active profile's config (see titlebar)."/>
             
             <Button Content="Run APB"
                     Command="{Binding OnRunAPBCommand}"
-                    IsEnabled="{Binding IsGamePathValid}"/>
+                    IsEnabled="{Binding IsGamePathValid}"
+                    ToolTip.Tip="Runs APB: Reloaded with the currently active profile (see titlebar)."/>
             
         </StackPanel>
 
