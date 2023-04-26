@@ -199,6 +199,8 @@ namespace APBConfigManager.UI.ViewModels
             ProfileModel profileModel = new ProfileModel(profile);
             Profiles.Add(profileModel);
 
+            ProfileManager.Instance.CopyGameConfigToProfile(profile.id);
+
             IsBusy = false;
         }
 
