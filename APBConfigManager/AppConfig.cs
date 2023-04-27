@@ -73,8 +73,15 @@ namespace APBConfigManager
         {
             get
             {
-                return Instance._activeProfile ??
-                    throw new NullReferenceException("Attempted to retrieve active profile before it was set!");
+                try
+                {
+                    ProfileManager.Instance.GetProfileById(Guid.Parse(Instance._activeProfile));
+                } catch
+                {
+                    ProfileManager.Instance.ActivateProfile(Guid.Parse("9ee743e6-f82f-421a-b80b-987b220710e9"));
+                }
+
+                return Instance._activeProfile;
             }
 
             set

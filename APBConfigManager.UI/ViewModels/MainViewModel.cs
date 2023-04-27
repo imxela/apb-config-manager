@@ -28,7 +28,8 @@ namespace APBConfigManager.UI.ViewModels
         {
             get
             {
-                return "APB Config Manager (Active Profile: " + ProfileManager.Instance.GetProfileById(Guid.Parse(AppConfig.ActiveProfile)).name + ")";
+                string activeProfileName = ProfileManager.Instance.GetProfileById(Guid.Parse(AppConfig.ActiveProfile)).name;
+                return "APB Config Manager (Active Profile: " + activeProfileName + ")";
             }
         }
 
@@ -88,19 +89,22 @@ namespace APBConfigManager.UI.ViewModels
         {
             get
             {
+                if (AppConfig.GamePath == string.Empty)
+                    return "Please select a valid APB install path";
+
                 return AppConfig.GamePath;
             }
 
             set
             {
-                if (value == null)
+                if (value == null || value == string.Empty)
                 {
-                    AppConfig.GamePath = "Game path not set!";
+                    AppConfig.GamePath = string.Empty;
                     _isGamePathValid = false;
                 }
                 else if (!ProfileManager.IsValidGamePath(value))
                 {
-                    AppConfig.GamePath = "The selected directory is not a valid APB install!";
+                    AppConfig.GamePath = string.Empty;
                     _isGamePathValid = false;
                 }
                 else
