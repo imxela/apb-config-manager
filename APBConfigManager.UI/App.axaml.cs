@@ -36,7 +36,6 @@ public partial class App : Application
             };
 
             desktop.MainWindow = new MainWindow();
-            desktop.MainWindow.DataContext = new MainViewModel(desktop.MainWindow);
         }
 
         base.OnFrameworkInitializationCompleted();
