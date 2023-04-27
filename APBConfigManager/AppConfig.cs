@@ -105,7 +105,7 @@ namespace APBConfigManager
         {
             get
             {
-                return AppRootDir + "\\config.json";
+                return AppRootDir + "\\Data\\config.json";
             }
         }
 
@@ -129,7 +129,7 @@ namespace APBConfigManager
         {
             get
             {
-                return AppRootDir + "\\Profiles\\";
+                return AppRootDir + "\\Data\\Profiles\\";
             }
         }
 
