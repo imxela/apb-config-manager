@@ -61,9 +61,9 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <ScrollViewer Margin="10" 
-                      Grid.Row="2" 
-                      Grid.Column="2" 
+        <ScrollViewer Margin="10"
+                      Grid.Row="2"
+                      Grid.Column="2"
                       Grid.ColumnSpan="3">
             
             <StackPanel>

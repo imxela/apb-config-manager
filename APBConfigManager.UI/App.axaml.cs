@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using APBConfigManager.UI.ViewModels;
 using APBConfigManager.UI.Views;
 using System;
 

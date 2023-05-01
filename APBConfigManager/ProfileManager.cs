@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Reflection.Metadata.Ecma335;
 
 namespace APBConfigManager
 {
@@ -39,41 +40,18 @@ namespace APBConfigManager
         private ProfileManager()
         {
             _profiles = ReadProfilesFromDisk();
-
-            // If no symlink exists this is likely a first-time run, so we
-            // backup the current configuration to a backup profile before
-            // creating one.
-
-            if (Directory.Exists(AppConfig.GameConfigDirPath) && 
-                !IsSymlink(AppConfig.GameConfigDirPath))
-            {
-                CopyGameConfigToProfile(GetProfilesByName("Backup")[0].id);
-
-                Profile? baProfile = null;
-
-                List<Profile> backupProfiles = new List<Profile>();
-                foreach (var backupProfile in backupProfiles)
-                {
-                    if (backupProfile.readOnly)
-                    {
-                        baProfile = backupProfile;
-                    }
-                }
-
-                // Backup profile not found - create it
-                if (baProfile == null)
-                {
-                    baProfile = CreateProfile("Backup", string.Empty, true);
-                }
-
-                CopyGameConfigToProfile(baProfile.id);
-
-                Directory.Delete(AppConfig.GameConfigDirPath, true);
-            }
         }
 
+        /// <summary>
+        /// Creates a new profile with the specified parameters. If a profile
+        /// with the given name already exists no new profile is created and
+        /// the preeexisting one is returned.
+        /// </summary>
         public Profile CreateProfile(string name, string gameArguments = "", bool readOnly = false)
         {
+            if (GetProfilesByName(name).Count > 0)
+                return GetProfilesByName(name)[0];
+
             Guid id = Guid.NewGuid();
 
             Directory.CreateDirectory(AppConfig.ProfileConfigDirPath + id.ToString());
@@ -253,7 +231,17 @@ namespace APBConfigManager
 
         private List<Profile> ReadProfilesFromDisk()
         {
-            string json = File.OpenText(AppConfig.ProfileConfigFilepath).ReadToEnd();
+            Directory.CreateDirectory(AppConfig.ProfileConfigDirPath);
+            FileStream stream = File.Open(AppConfig.ProfileConfigFilepath, FileMode.OpenOrCreate);
+
+            byte[] bytes = new byte[stream.Length];
+            stream.Read(bytes, 0, (int)stream.Length);
+            stream.Close();
+
+            if (bytes.Length == 0)
+                return new List<Profile>();
+
+            string json = System.Text.Encoding.UTF8.GetString(bytes);
 
             return JsonConvert.DeserializeObject<List<Profile>>(json) ??
                 new List<Profile>();

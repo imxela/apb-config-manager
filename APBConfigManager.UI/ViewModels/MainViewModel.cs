@@ -28,7 +28,14 @@ namespace APBConfigManager.UI.ViewModels
         {
             get
             {
+                if (AppConfig.ActiveProfile == null)
+                    return "APB Config Manager (Active Profile: None)";
+
                 string activeProfileName = ProfileManager.Instance.GetProfileById(Guid.Parse(AppConfig.ActiveProfile)).name;
+
+                if (activeProfileName == string.Empty)
+                    activeProfileName = "None";
+
                 return "APB Config Manager (Active Profile: " + activeProfileName + ")";
             }
         }
@@ -160,16 +167,14 @@ namespace APBConfigManager.UI.ViewModels
             StatusText = "Initializing...";
             IsBusy = true;
 
+            _window = window;
+
             foreach (Profile profile in ProfileManager.Instance.Profiles)
             {
                 _profiles.Add(new ProfileModel(profile));
             }
 
-            SelectedProfile = Profiles[0];
-
             GamePath = AppConfig.GamePath;
-
-            _window = window;
 
             IsBusy = false;
         }
@@ -184,6 +189,24 @@ namespace APBConfigManager.UI.ViewModels
             // this warning is kind of annoying though.
             // Todo: Fix?
             GamePath = result;
+
+            // Create backup profile if one does not exist
+            if (ProfileManager.Instance.GetProfilesByName("Backup").Count == 0)
+            {
+                Profile backup = ProfileManager.Instance.CreateProfile("Backup", string.Empty, true);
+                ProfileModel model = new ProfileModel("Backup", string.Empty, true);
+                _profiles.Add(model);
+
+                ProfileManager.Instance.CopyGameConfigToProfile(backup.id);
+
+                // Files backed up, its safe to delete them for a symlink
+                Directory.Delete(AppConfig.GameConfigDirPath, true);
+
+                ProfileManager.Instance.ActivateProfile(backup.id);
+
+                SelectedProfile = model;
+                AppConfig.ActiveProfile = backup.id.ToString();
+            }
         }
 
         public void OnCreateProfileCommand()

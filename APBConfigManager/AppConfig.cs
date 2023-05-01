@@ -69,7 +69,7 @@ namespace APBConfigManager
             }
         }
 
-        public static string ActiveProfile
+        public static string? ActiveProfile
         {
             get
             {
@@ -78,7 +78,7 @@ namespace APBConfigManager
                     ProfileManager.Instance.GetProfileById(Guid.Parse(Instance._activeProfile));
                 } catch
                 {
-                    ProfileManager.Instance.ActivateProfile(Guid.Parse("9ee743e6-f82f-421a-b80b-987b220710e9"));
+                    return null;
                 }
 
                 return Instance._activeProfile;
@@ -166,6 +166,9 @@ namespace APBConfigManager
                 StreamReader jsonFile = File.OpenText(AppConfigFilepath);
                 string jsonData = jsonFile.ReadToEnd();
                 jsonFile.Close();
+
+                if (jsonData == string.Empty)
+                    return Default();
 
                 // Should only fail if the above does, which means this
                 // exception should never be triggered
