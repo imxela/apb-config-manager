@@ -1,381 +1,464 @@
 ﻿using Newtonsoft.Json;
 using System.Diagnostics;
-using System.Reflection.Metadata.Ecma335;
 
-namespace APBConfigManager
+namespace APBConfigManager;
+
+public class ProfileManager
 {
-    public class ProfileNotFoundException : Exception
+    public FullyObservableCollection<Profile> Profiles;
+
+    public Guid ActiveProfile
     {
-        public ProfileNotFoundException() { }
-        public ProfileNotFoundException(string message) : base(message) { }
-        public ProfileNotFoundException(string message, Exception inner) : base(message, inner) { }
+        get
+        {
+            return AppConfig.ActiveProfile;
+        }
     }
 
-    public class InvalidGamePathException : Exception
+    // Todo: Pass AppConfig to constructor?
+    public ProfileManager()
     {
-        public InvalidGamePathException() { }
-        public InvalidGamePathException(string message) : base(message) { }
-        public InvalidGamePathException(string message, Exception inner) : base(message, inner) { }
+        Profiles = new FullyObservableCollection<Profile>();
+
+        foreach (Profile profile in LoadProfiles())
+        {
+            Profiles.Add(profile);
+        }
+
+        // Save profiles on change
+        Profiles.CollectionChanged += (sender, e) => {
+            Debug.WriteLine("Profiles.CollectionChanged fired, saving profiles");
+            SaveProfiles();
+        };
+
+        CreateBackupProfile();
     }
 
-    public class ProfileManager
+    /// <summary>
+    /// Loads saved profiles from disk as an array.
+    /// </summary>
+    private Profile[] LoadProfiles()
     {
-        private static ProfileManager? _instance;
+        string profileData = FileUtils.ReadJsonFile(AppConfig.ProfileDatabaseFilepath);
 
-        public static ProfileManager Instance
+        Profile[]? profiles = 
+            JsonConvert.DeserializeObject<Profile[]>(profileData);
+
+        if (profiles == null)
+            return new Profile[0];
+
+        return profiles;
+    }
+
+    /// <summary>
+    /// Saves in-memory profiles to disk.
+    /// </summary>
+    private void SaveProfiles()
+    {
+        string profileData = 
+            JsonConvert.SerializeObject(Profiles, Formatting.Indented);
+
+        FileUtils.WriteJsonFile(profileData, AppConfig.ProfileDatabaseFilepath);
+    }
+
+    /// <summary>
+    /// Creates a new profile and returns the GUID corresponding to it.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown if the specified name is in use by an existing profile.
+    /// </exception>
+    public Guid CreateProfile(string name, bool readOnly = false, string? gameArgs = null)
+    {
+        // Disallow multiple profiles with the same name to avoid confusion
+        if (DoesProfileByNameExist(name))
         {
-            get
-            {
-                return _instance ??= new ProfileManager();
-            }
+            throw new ArgumentException("The specified profile name " +
+                "is already in use");
         }
 
-        private List<Profile> _profiles;
+        Profile profile = new Profile(
+            Guid.NewGuid(),
+            name,
+            gameArgs ?? string.Empty,
+            readOnly);
 
-        public List<Profile> Profiles
+        Profiles.Add(profile);
+
+        SaveProfiles();
+
+        return profile.Id;
+    }
+
+    /// <summary>
+    /// Imports the specified APB installation as a configuration profile.
+    /// Optionally allows for removing the installation once imported.
+    /// </summary>
+    public Guid ImportProfile(string path, bool delete = false)
+    {
+        Guid profileId = CreateProfile(path, false, null);
+
+        CopyGameConfigToProfile(profileId, path);
+
+        if (delete)
+            Directory.Delete(path, true);
+
+        return profileId;
+    }
+
+    /// <summary>
+    /// Deletes the profile corresponding to the given GUID.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown if no profile corresponding to the given GUID exists.
+    /// </exception>
+    public void DeleteProfile(Guid id)
+    {
+        if (!DoesProfileByIdExist(id))
         {
-            get { return _profiles; }
+            throw new ArgumentException("Cannot delete profile because no " +
+                "profile corresponding with the given GUID exists.");
         }
 
-        private ProfileManager()
+        // If the profile to be deleted is the currently active one
+        // we have to set another profile as active before deletion
+        // otherwise the ID of the active profile will become dangling.
+        if (ActiveProfile == id)
         {
-            _profiles = ReadProfilesFromDisk();
+            int profileIndex = Profiles.IndexOf(GetProfileById(id));
+
+            // Assuming 'id' is not the last item in the list the
+            // index of the new active profile will remain the same
+            // as the list will be resized and therefore the next item
+            // will take the index of the currently active one.
+            int newActiveProfileIndex = profileIndex;
+
+            // If 'id' is the last item in the list, simply
+            // set the new active profile to be the item in the
+            // index located before the old active profile.
+            if (profileIndex == Profiles.Count - 1)
+                newActiveProfileIndex = profileIndex - 1;
+
+            MakeProfileActive(Profiles[newActiveProfileIndex].Id);
         }
 
-        /// <summary>
-        /// Creates a new profile with the specified parameters. If a profile
-        /// with the given name already exists no new profile is created and
-        /// the preeexisting one is returned.
-        /// </summary>
-        public Profile CreateProfile(string name, string gameArguments = "", bool readOnly = false)
+        Profile profile = GetProfileById(id);
+
+        Profiles.Remove(profile);
+    }
+
+    /// <summary>
+    /// Creates a backup profile if one does not exist. Returns false if one
+    /// already exists.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if APB's config directory is symlinked without a backup
+    /// profile having been previously created.
+    /// </exception>
+    public bool CreateBackupProfile()
+    {
+        if (DoesProfileByNameExist("Backup"))
         {
-            if (GetProfilesByName(name).Count > 0)
-                return GetProfilesByName(name)[0];
-
-            Guid id = Guid.NewGuid();
-
-            Directory.CreateDirectory(AppConfig.ProfileConfigDirPath + id.ToString());
-
-            Profile profile = new Profile(id, name, gameArguments, readOnly);
-            _profiles.Add(profile);
-
-            SyncJsonDatabase();
-
-            return profile;
-        }
-
-        /// <summary>
-        /// Creates a new configuration profile and imports configuration
-        /// files from a pre-existing APB: Reloaded install.
-        /// </summary>
-        /// <param name="path">
-        /// Path to the APB: Reloaded installation directory to copy the
-        /// configuration files from.
-        /// </param>
-        /// <param name="delete">
-        /// If true, the specified APB: Reloaded install will be permanently
-        /// deleted after  the configuration files have been copied to
-        /// the specified profile.
-        /// </param>
-        /// <returns>The newly imported profile</returns>
-        /// <exception cref="InvalidGamePathException">
-        /// Throws InvalidGamePathException if the specified path does not
-        /// lead to a valid APB: Reloaded installation directory.
-        /// </exception>
-        public Profile ImportProfile(string path, bool delete = false)
-        {
-            Profile profile = CreateProfile("Imported Profile");
-
-            CopyGameConfigToProfile(profile.id, path);
-
-            if (delete)
-                Directory.Delete(path, true);
-
-            return profile;
-        }
-
-        /// <param name="profileId"></param>
-        /// <exception cref="DirectoryNotFoundException">
-        /// Throws DirectoryNotFoundException if the config directory
-        /// for the profile corresponding with the specified GUID
-        /// does not exist.
-        /// </exception>
-        public void DeleteProfile(Guid profileId)
-        {
-            Profile profile = GetProfileById(profileId);
-            _profiles.Remove(profile);
-
-            if (!Directory.Exists(AppConfig.ProfileConfigDirPath + profileId.ToString()))
-            {
-                throw new DirectoryNotFoundException(
-                    "Could not create shortcut because the directory for " +
-                    "the specified profile GUID is missing");
-            }
-
-            Directory.Delete(AppConfig.ProfileConfigDirPath + profileId, true);
-
-            SyncJsonDatabase();
-        }
-
-        /// <exception cref="ProfileNotFoundException">
-        /// Throws ProfileNotFoundException if the specified GUID does not
-        /// correspond to an existing profile.
-        /// </exception>
-        public void UpdateProfile(Profile newProfileData)
-        {
-            for (int i = 0; i < _profiles.Count; i++)
-            {
-                if (_profiles[i].id == newProfileData.id)
-                {
-                    _profiles[i] = newProfileData;
-                    SyncJsonDatabase();
-
-                    return;
-                }
-            }
-
-            throw new ProfileNotFoundException(
-                "Could not delete profile because no profile corresponding to" +
-                "the specified GUID exists. ");
-        }
-
-        /// <summary>
-        /// Returns the profile matching the specified ID.
-        /// Throws a KeyNotFoundException if no profile with the specified ID exists.
-        /// </summary>
-        public Profile GetProfileById(Guid id)
-        {
-            for (int i = 0; i < _profiles.Count; i++)
-            {
-                if (_profiles[i].id == id)
-                {
-                    return _profiles[i];
-                }
-            }
-
-            throw new ProfileNotFoundException(
-                $"Could not retrieve profile because no profile " +
-                $"corresponding with the specified GUID exists.");
-        }
-
-        /// <summary>
-        /// Returns the directory corresponding to the profile with the 
-        /// given GUID.
-        /// </summary>
-        public string GetProfileDirById(Guid profileId)
-        {
-            if (!DoesProfileWithIdExist(profileId))
-                throw new ProfileNotFoundException(
-                    "The specified GUID does not correspond with an " +
-                    "existing profile.");
-
-            return AppConfig.ProfileConfigDirPath + profileId.ToString();
-        }
-
-        /// <summary>
-        /// Returns true if a profile with the given ID exists
-        /// </summary>
-        public bool DoesProfileWithIdExist(Guid id)
-        {
-            for (int i = 0; i < _profiles.Count; i++)
-            {
-                if (_profiles[i].id == id)
-                {
-                    return true;
-                }
-            }
-
             return false;
         }
 
-        /// <summary>
-        /// Returns a list of profiles with the specified name.
-        /// </summary>
-        public List<Profile> GetProfilesByName(string name)
+        // It should not be possible for APB's config directory to be
+        // symlinked if not backup exists. This is because a symlink
+        // indicates that APBConfigManager has already been run, which
+        // in turn means that it should already have created a backup profile.
+        // Therefore, an exception is thrown here as something has clearly
+        // gone wrong somewhere.
+        if (FileUtils.IsSymlink(AppConfig.AbsGameConfigDir))
         {
-            List<Profile> matches = new List<Profile>();
-
-            for (int i = 0; i < _profiles.Count; i++)
-            {
-                if (_profiles[i].name == name)
-                {
-                    matches.Add(_profiles[i]);
-                }
-            }
-
-            return matches;
+            throw new InvalidOperationException(
+                "Expected directory but found symlink " +
+                "while creating a backup profile");
         }
 
-        /// <summary>
-        /// Activates the specified profile and runs the APB: Reloaded 
-        /// executable with the arguments specified in the profile.
-        /// </summary>
-        public void RunGameWithProfile(Guid profileId)
+        Guid backupProfile = CreateProfile("Backup", true);
+        CopyGameConfigToProfile(backupProfile);
+
+        // Note: This could be bad if backup was not created properly!
+        Directory.Delete(AppConfig.AbsGameConfigDir, true);
+
+        MakeProfileActive(backupProfile);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Activates the specified profile by symlinking APB's config file
+    /// directory to the config directory associated with the specified
+    /// profile.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// If the APB config directory isn't a symbolic link it means that the
+    /// original config files may not have been backed up properly. Rather
+    /// than overwriting the files, an InvalidOperationException is thrown.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown if no profile corresponding to the given GUID exists.
+    /// </exception>
+    public void MakeProfileActive(Guid id)
+    {
+        if (!DoesProfileByIdExist(id))
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.FileName = AppConfig.GameExecutableFilepath;
-            startInfo.WorkingDirectory = AppConfig.GamePath;
-            
-            startInfo.Arguments = GetProfileById(profileId)?.gameArgs ?? string.Empty;
-
-            ActivateProfile(profileId);
-
-            Process.Start(startInfo);
+            throw new ArgumentException(
+                "Cannot activate profile because no profile " +
+                "corresponding to the given GUID exists.");
         }
 
-        private void SyncJsonDatabase()
+        // Delete previous symlink if one exists
+        if (FileUtils.IsSymlink(AppConfig.AbsGameConfigDir))
         {
-            string jsonData = JsonConvert.SerializeObject(_profiles);
-            File.WriteAllText(AppConfig.ProfileConfigFilepath, jsonData);
+            Directory.Delete(AppConfig.AbsGameConfigDir, true);
+        }
+        // The directory should always be symlinked - throw an exception
+        else
+        {
+            // When APBConfigManager runs for the first time, the game
+            // configuration files are copied to a Backup profile which 
+            // the game config directory is then symlinked to.
+            // This means that something has gone very wrong if it isn't
+            // symlinked at this point, and in order to not jeopardize
+            // the users configuration files, we throw an exception here.
+            // throw new InvalidOperationException(
+            //     "Expected a directory but found a symlink.");
         }
 
-        private List<Profile> ReadProfilesFromDisk()
+        Directory.CreateSymbolicLink(
+            AppConfig.AbsGameConfigDir, 
+            AppConfig.AbsProfileConfigDir + id.ToString());
+
+        AppConfig.ActiveProfile = id;
+
+        Debug.WriteLine($"Successfully switched to profile '{id}'");
+    }
+
+    /// <summary>
+    /// Copies the specified APB configuration files to the given profile.
+    /// In most cases, this is synonymous with the configuration directory
+    /// of the currently active profile since the game configuration
+    /// directory is symlinked to it. If <paramref name="apbPath"/> is
+    /// null the path will default to the currently selected APB path.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown if no profile with the given GUID exists or if the given
+    /// game path does not lead to a valid APB game installation directory.
+    /// </exception>
+    public void CopyGameConfigToProfile(Guid id, string? apbPath = null)
+    {
+        string gamePath = apbPath != null ? apbPath : AppConfig.GamePath;
+
+        if (!IsValidGamePath(gamePath))
         {
-            Directory.CreateDirectory(AppConfig.ProfileConfigDirPath);
-            FileStream stream = File.Open(AppConfig.ProfileConfigFilepath, FileMode.OpenOrCreate);
-
-            byte[] bytes = new byte[stream.Length];
-            stream.Read(bytes, 0, (int)stream.Length);
-            stream.Close();
-
-            if (bytes.Length == 0)
-                return new List<Profile>();
-
-            string json = System.Text.Encoding.UTF8.GetString(bytes);
-
-            return JsonConvert.DeserializeObject<List<Profile>>(json) ??
-                new List<Profile>();
+            throw new ArgumentException(
+                "The specified path does not lead to a valid " +
+                "APB: Reloaded installation directory");
         }
 
-        /// <exception cref="ProfileNotFoundException">
-        /// Throws ProfileNotFoundException if the specified GUID does not
-        /// correspond to an existing profile.
-        /// </exception>
-        /// <exception cref="InvalidGamePathException">
-        /// Throws InvalidGamePathException if the specified path does not
-        /// lead to a valid APB: Reloaded installation directory.
-        /// </exception>
-        public void CopyGameConfigToProfile(Guid profileId, string? path = null)
+        if (!DoesProfileByIdExist(id))
         {
-            if (path == null)
-                path = AppConfig.GamePath;
-
-            if (!IsValidGamePath(path))
-            {
-                throw new InvalidGamePathException(
-                    "The specified path does not lead to a valid " +
-                    "APB: Reloaded installation directory");
-            }
-
-            if (!DoesProfileWithIdExist(profileId))
-            {
-                throw new ProfileNotFoundException(
-                    "Can not copy game configuration to profile because" +
-                    "no profile with a corresponding GUID exists.");
-            }
-
-            string configDirPath = path + AppConfig.RelativeGameConfigDirPath;
-            string[] files = Directory.GetFiles(configDirPath, "*", SearchOption.AllDirectories);
-
-            foreach (string file in files)
-            {
-                string relativeFilePath = Path.GetRelativePath(configDirPath, file);
-                string profileFilePath = GetProfileDirById(profileId) + "\\" + relativeFilePath;
-
-                new FileInfo(profileFilePath).Directory?.Create();
-
-                File.Copy(file, profileFilePath, true);
-            }
+            throw new ArgumentException(
+                "Can not copy game configuration to profile because" +
+                "no profile associated with the given GUID exists.");
         }
 
-        /// <summary>
-        /// Activates the specified profile. Works by creating a symlink
-        /// from the APB config directory (APBGame/Config) to the config
-        /// directory of the specified config profile.
-        /// </summary>
-        /// <exception cref="ProfileNotFoundException">
-        /// Throws ProfileNotFoundException if the specified GUID does not
-        /// correspond to an existing profile.
-        /// </exception>
-        public void ActivateProfile(Guid profileId)
+        string configDirPath = gamePath + AppConfig.RelGameConfigDir;
+        string[] files = Directory.GetFiles(configDirPath, "*", SearchOption.AllDirectories);
+
+        foreach (string file in files)
         {
-            if (!DoesProfileWithIdExist(profileId))
-            {
-                throw new ProfileNotFoundException(
-                    "Can not activate profile with the specified GUID " +
-                    "because no profile with a corrsponding " +
-                    "GUID exists.");
-            }
+            string relativeFilePath = Path.GetRelativePath(configDirPath, file);
+            string profileFilePath = GetProfileConfigDirectory(id) + "\\" + relativeFilePath;
 
-            // Delete previous symlink if one exists
-            if (IsSymlink(AppConfig.GameConfigDirPath))
-                Directory.Delete(AppConfig.GameConfigDirPath);
+            new FileInfo(profileFilePath).Directory?.Create();
 
-            Directory.CreateSymbolicLink(AppConfig.GameConfigDirPath, AppConfig.ProfileConfigDirPath + profileId.ToString());
+            File.Copy(file, profileFilePath, true);
+        }
+    }
 
-            AppConfig.ActiveProfile = profileId.ToString();
+    /// <summary>
+    /// Creates a shortcut in the given path for the specified profile.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown if the given GUID does not correspond to an existing profile.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if calls to the underlaying IWshRuntimeLibrary returns null.
+    /// There is however no way to determine when this happens as Microsoft
+    /// has not documented any reasons as to why the method(s) might return
+    /// null. Good luck!
+    /// </exception>
+    public void CreateProfileShortcut(Guid id, string filepath)
+    {
+        if (!DoesProfileByIdExist(id))
+        {
+            throw new ArgumentException(
+                "Cannot create profile shortcut because no profile" +
+                "associated with the given GUID exists.");
         }
 
-        /// <summary>
-        /// Will recreate the symlink if a shortcut to the specified profile
-        /// already exists in the given location. Returns false if the 
-        /// shortcut could not be created.
-        /// </summary>
-        /// <exception cref="ProfileNotFoundException">
-        /// Throws ProfileNotFoundException if the specified GUID does not
-        /// correspond to an existing profile.
-        /// </exception>
-        public bool CreateDesktopShortcutForProfile(Guid profileId, string shortcutFilepath)
+        // Remove shortcut if it already exists - overwrite it
+        if (File.Exists(filepath))
+            File.Delete(filepath);
+
+        ProcessModule? procMod = Process.GetCurrentProcess().MainModule;
+        if (procMod == null)
         {
-            if (!DoesProfileWithIdExist(profileId))
-            {
-                throw new ProfileNotFoundException(
-                    "Can not create profile shortcut with the specified GUID " +
-                    "because no profile with a corrsponding GUID exists.");
-            }
-
-            if (File.Exists(shortcutFilepath))
-                File.Delete(shortcutFilepath);
-
-            ProcessModule? procMod = Process.GetCurrentProcess().MainModule;
-            if (procMod == null || procMod.FileName == null)
-                return false;
-
-            string appExePath = procMod.FileName;
-            string targetPath = appExePath;
-
-            IWshRuntimeLibrary.WshShell shell = new IWshRuntimeLibrary.WshShell();
-            IWshRuntimeLibrary.IWshShortcut? shortcut =
-                shell.CreateShortcut(shortcutFilepath) as IWshRuntimeLibrary.IWshShortcut;
-
-            if (shortcut == null)
-                return false;
-
-            shortcut.TargetPath = targetPath;
-            shortcut.Arguments = profileId.ToString();
-            shortcut.Save();
-
-            return true;
+            throw new InvalidOperationException(
+                "'Process.GetCurrentProcess().MainModule' returned null " +
+                "due to reasons not documented by Microsoft.");
+        }
+        else if (procMod.FileName == null)
+        {
+            throw new InvalidOperationException(
+                "'Process.GetCurrentProcess().MainModule.FileName' " +
+                "returned null despite being documented by Microsoft as " +
+                "a non-nullable type.");
         }
 
+        string appExePath = procMod.FileName;
+        string targetPath = appExePath;
 
-        /// <summary>
-        /// Returns true of the specified file is a valid path to an APB
-        /// install directory by checking if the game executable exists.
-        /// </summary>
-        public static bool IsValidGamePath(string path)
+        IWshRuntimeLibrary.WshShell shell = new IWshRuntimeLibrary.WshShell();
+        IWshRuntimeLibrary.IWshShortcut? shortcut =
+            shell.CreateShortcut(filepath) as IWshRuntimeLibrary.IWshShortcut;
+
+        if (shortcut == null)
         {
-            return File.Exists(path + AppConfig.GameRelativeExePath);
+            throw new InvalidOperationException(
+                "Failed to create shortcut using IWshRuntimeLibrary for " +
+                "reasons unknown to me because I cannot find any " +
+                "documentation.");
         }
 
-        /// <summary>
-        /// Returns true if the specified file is a symbolic link.
-        /// Will return false if the file does not exist.
-        /// </summary>
-        private bool IsSymlink(string filepath)
+        shortcut.TargetPath = targetPath;
+        shortcut.Arguments = id.ToString();
+        shortcut.Save();
+    }
+
+
+    /// <summary>
+    /// Sets the path to the APB installation which the profiles will be
+    /// applied to. Returns false if the given path is not a valid path
+    /// to an APB installation directory.
+    /// </summary>
+    public bool SetGamePath(string path)
+    {
+        if (!IsValidGamePath(path))
+            return false;
+
+        AppConfig.GamePath = path;
+
+        // The active profile has to be reapplied to the new APB install
+        MakeProfileActive(ActiveProfile);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Returns true if the given path is a valid path to an APB install
+    /// root directory. This is determined by checking for the existance
+    /// of the APB executable (APB.exe) in the "Binaries" subdirectory.
+    /// </summary>
+    public static bool IsValidGamePath(string path)
+    {
+        return File.Exists(path + "\\Binaries\\APB.exe");
+    }
+
+    /// <summary>
+    /// Returns the profile corresponding to the given GUID.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown if no profile corresponding to the given GUID exists.
+    /// </exception>
+    public Profile GetProfileById(Guid id)
+    {
+        foreach (Profile profile in Profiles)
         {
-            FileInfo info = new FileInfo(filepath);
-            return info.LinkTarget != null;
+            if (profile.Id == id) return profile;
         }
+
+        throw new ArgumentException(
+            "No profile corresponding to the given GUID exists.");
+    }
+
+    /// <summary>
+    /// Returns the profile with the specified name.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown if no profile with the specified name exists.
+    /// </exception>
+    public Profile GetProfileByName(string name)
+    {
+        foreach (Profile profile in Profiles)
+        {
+            if (profile.Name == name) return profile;
+        }
+
+        throw new ArgumentException("No profile with the given name exists.");
+    }
+
+
+    /// <summary>
+    /// Returns true if a profile corresponding to the given GUID exists or
+    /// false if not.
+    /// </summary>
+    public bool DoesProfileByIdExist(Guid id)
+    {
+        foreach (Profile profile in Profiles)
+        {
+            if (profile.Id == id) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Returns true if a profile with the given name exists or false if not.
+    /// </summary>
+    public bool DoesProfileByNameExist(string name)
+    {
+        foreach (Profile profile in Profiles)
+        {
+            if (profile.Name == name) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Returns a path to the directory where configuration files for the
+    /// corresponding to the given GUID is stored.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown if no profile corresponding to the given GUID exists.
+    /// </exception>
+    public string GetProfileConfigDirectory(Guid id)
+    {
+        if (!DoesProfileByIdExist(id))
+        {
+            throw new ArgumentException(
+                "No profile corresponding to the given GUID exists.");
+        }
+
+        return AppConfig.AppDataPath + "Profiles\\" + id.ToString();
+    }
+
+    /// <summary>
+    /// Activates the specified profile and runs the APB: Reloaded 
+    /// executable with the arguments specified in the profile.
+    /// </summary>
+    public void RunGameWithProfile(Guid profileId)
+    {
+        ProcessStartInfo startInfo = new ProcessStartInfo();
+        startInfo.FileName = AppConfig.AbsGameExeFilepath;
+        startInfo.WorkingDirectory = AppConfig.GamePath;
+
+        startInfo.Arguments = GetProfileById(profileId).GameArgs;
+
+        MakeProfileActive(profileId);
+
+        Process.Start(startInfo);
     }
 }

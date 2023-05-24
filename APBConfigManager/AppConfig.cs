@@ -1,8 +1,14 @@
-﻿using Newtonsoft.Json;
+﻿using JetBrains.Annotations;
+using Newtonsoft.Json;
+using System.ComponentModel;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace APBConfigManager
 {
+    /// <summary>
+    /// Stores application settings and global variables for APBConfigManager.
+    /// </summary>
     [JsonObject(MemberSerialization.OptIn)]
     public class AppConfig
     {
@@ -26,16 +32,76 @@ namespace APBConfigManager
         }
 
         [JsonProperty]
-        public string? _gamePath;
+        public string _gamePath = string.Empty;
 
         [JsonProperty]
-        public string? _activeProfile;
+        public Guid _activeProfile = Guid.Empty;
+
+        public static string AppDataPath
+        {
+            get
+            {
+                string path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\APBConfigManager\\";
+
+                FileUtils.CreateDirectoryIfNotExists(path);
+
+                return path;
+            }
+        }
+
+        public static string RelProfileConfigDir
+        {
+            get
+            {
+                return "\\Profiles\\";
+            }
+        }
+
+        public static string AbsProfileConfigDir
+        {
+            get
+            {
+                return AppDataPath + RelProfileConfigDir;
+            }
+        }
+
+        public static string AppConfigFilepath
+        {
+            get
+            {
+                return AppDataPath + "\\config.json";
+            }
+        }
+
+        public static string ProfileDatabaseFilepath
+        {
+            get
+            {
+                return AbsProfileConfigDir + "\\profiles.json";
+            }
+        }
+
+        public static string RelGameExePath
+        {
+            get
+            {
+                return "\\Binaries\\APB.exe";
+            }
+        }
+
+        public static string AbsGameExeFilepath
+        {
+            get
+            {
+                return GamePath + RelGameExePath;
+            }
+        }
 
         public static string GamePath
         {
             get
             {
-                return Instance._gamePath ?? string.Empty;
+                return Instance._gamePath;
             }
 
             set
@@ -45,23 +111,7 @@ namespace APBConfigManager
             }
         }
 
-        public static string GameRelativeExePath
-        {
-            get
-            {
-                return "\\Binaries\\APB.exe";
-            }
-        }
-
-        public static string GameExecutableFilepath
-        {
-            get
-            {
-                return GamePath + GameRelativeExePath;
-            }
-        }
-
-        public static string AdvLauncherExecutablePath
+        public static string AbsAdvLauncherExePath
         {
             get
             {
@@ -69,18 +119,26 @@ namespace APBConfigManager
             }
         }
 
-        public static string? ActiveProfile
+        public static string RelGameConfigDir
         {
             get
             {
-                try
-                {
-                    ProfileManager.Instance.GetProfileById(Guid.Parse(Instance._activeProfile));
-                } catch
-                {
-                    return null;
-                }
+                return "\\APBGame\\Config";
+            }
+        }
 
+        public static string AbsGameConfigDir
+        {
+            get
+            {
+                return GamePath + RelGameConfigDir;
+            }
+        }
+
+        public static Guid ActiveProfile
+        {
+            get
+            {
                 return Instance._activeProfile;
             }
 
@@ -88,56 +146,6 @@ namespace APBConfigManager
             {
                 Instance._activeProfile = value;
                 Instance.Save();
-            }
-        }
-
-        public static string AppRootDir
-        {
-            get
-            {
-                string assemblyPath = Assembly.GetExecutingAssembly().Location;
-                return Path.GetDirectoryName(assemblyPath) ?? 
-                    throw new DirectoryNotFoundException("Could not locate assembly directory");
-            }
-        }
-
-        public static string AppConfigFilepath
-        {
-            get
-            {
-                return AppRootDir + "\\Data\\config.json";
-            }
-        }
-
-        public static string RelativeGameConfigDirPath
-        {
-            get
-            {
-                return "\\APBGame\\Config\\";
-            }
-        }
-
-        public static string GameConfigDirPath
-        {
-            get
-            {
-                return GamePath + RelativeGameConfigDirPath;
-            }
-        }
-
-        public static string ProfileConfigDirPath
-        {
-            get
-            {
-                return AppRootDir + "\\Data\\Profiles\\";
-            }
-        }
-
-        public static string ProfileConfigFilepath
-        {
-            get
-            {
-                return ProfileConfigDirPath + "profiles.json";
             }
         }
 
@@ -149,9 +157,8 @@ namespace APBConfigManager
             return new AppConfig
             {
                 _gamePath = string.Empty,
-                _activeProfile = null
+                _activeProfile = Guid.Empty
             };
-            
         }
 
         /// <summary>
@@ -162,21 +169,20 @@ namespace APBConfigManager
         {
             try
             {
-                // Fails with FileNotFoundException if config file does not exist
                 StreamReader jsonFile = File.OpenText(AppConfigFilepath);
                 string jsonData = jsonFile.ReadToEnd();
                 jsonFile.Close();
 
+                // Use the default config if the config file is empty
                 if (jsonData == string.Empty)
                     return Default();
 
-                // Should only fail if the above does, which means this
-                // exception should never be triggered
                 return JsonConvert.DeserializeObject<AppConfig>(jsonData) ??
                     throw new NullReferenceException("Failed to deserialize JSON config");
             }
             catch (FileNotFoundException)
             {
+                // Use default config if the config file doesn't exist
                 return Default();
             }
         }
@@ -186,7 +192,7 @@ namespace APBConfigManager
         /// </summary>
         public void Save()
         {
-            string serial = JsonConvert.SerializeObject(this);
+            string serial = JsonConvert.SerializeObject(this, Formatting.Indented);
             File.WriteAllText(AppConfigFilepath, serial);
         }
     }

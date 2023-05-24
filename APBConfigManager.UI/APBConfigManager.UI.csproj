@@ -6,6 +6,7 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <StartupObject>APBConfigManager.UI.Program</StartupObject>
+    <SignAssembly>False</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,5 +25,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\APBConfigManager\APBConfigManager.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Model\" />
   </ItemGroup>
 </Project>

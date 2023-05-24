@@ -50,12 +50,12 @@
                  Margin="0 10 0 10"
                  Items="{Binding Profiles}"
                  SelectedItem="{Binding SelectedProfile}"
-                 IsEnabled="{Binding IsGamePathValid}">
+                 IsEnabled="{Binding !IsGameRunning}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal">
                         <Label Content="{Binding Name}"/>
-                        <Label Content="*" IsVisible="{Binding IsDirty}"/>
+                        <Label Content="🛡️" IsVisible="{Binding ReadOnly}"/>
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>
@@ -103,18 +103,6 @@
                     IsEnabled="{Binding CanEditSelectedProfile}"
                     ToolTip.Tip="Delete the selected profile along with its configuration files."/>
 
-            <Button Content="Save"
-                    Command="{Binding OnSaveProfileCommand}"   
-                    Margin="0 0 10 0"
-                    IsEnabled="{Binding CanEditSelectedProfile}"
-                    ToolTip.Tip="Save profile name and launch arguments. Configuration files are saved automatically."/>
-
-            <Button Content="Activate"
-                    Command="{Binding OnActivateProfileCommand}"
-                    Margin="0 0 10 0"
-                    IsEnabled="{Binding IsGamePathValid}"
-                    ToolTip.Tip="Activate the selected profile by writing it to your APB install."/>
-
             <Button Content="Open in Explorer"
                     Command="{Binding OnOpenProfileDirInExplorerCommand}"
                     Margin="0 0 10 0"
@@ -157,13 +145,13 @@
 
             <Button Content="Run Adv. Launcher"
                     Command="{Binding OnRunAdvLauncherCommand}"
-                    IsEnabled="{Binding IsGamePathValid}"
+                    IsEnabled="{Binding !IsGameRunning}"
                     Margin="0 0 10 0"
                     ToolTip.Tip="Runs APB Advanced Launcher so you can edit the currently active profile's config (see titlebar)."/>
             
             <Button Content="Run APB"
                     Command="{Binding OnRunAPBCommand}"
-                    IsEnabled="{Binding IsGamePathValid}"
+                    IsEnabled="{Binding !IsGameRunning}"
                     ToolTip.Tip="Runs APB: Reloaded with the currently active profile (see titlebar)."/>
             
         </StackPanel>

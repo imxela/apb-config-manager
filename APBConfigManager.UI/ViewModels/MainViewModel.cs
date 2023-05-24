@@ -1,9 +1,7 @@
-﻿using APBConfigManager.UI.Model;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using JetBrains.Annotations;
 using System;
 using System.IO;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -22,21 +20,15 @@ namespace APBConfigManager.UI.ViewModels
 
         private Window _window;
 
+        private ProfileManager _profileManager;
+
         private string _statusText = string.Empty;
 
         public string WindowTitle
         {
             get
             {
-                if (AppConfig.ActiveProfile == null)
-                    return "APB Config Manager (Active Profile: None)";
-
-                string activeProfileName = ProfileManager.Instance.GetProfileById(Guid.Parse(AppConfig.ActiveProfile)).name;
-
-                if (activeProfileName == string.Empty)
-                    activeProfileName = "None";
-
-                return "APB Config Manager (Active Profile: " + activeProfileName + ")";
+                return "APB Config Manager";
             }
         }
 
@@ -87,8 +79,17 @@ namespace APBConfigManager.UI.ViewModels
         {
             get
             {
-                return IsGamePathValid && SelectedProfile != null &&
+                return IsGamePathValid &&
+                    !IsGameRunning &&
                     !SelectedProfile.ReadOnly;
+            }
+        }
+
+        public bool IsGameRunning
+        {
+            get
+            {
+                return IsGamePathValid && IsExecutableRunning(AppConfig.GamePath);
             }
         }
 
@@ -104,19 +105,17 @@ namespace APBConfigManager.UI.ViewModels
 
             set
             {
-                if (value == null || value == string.Empty)
+                if (!_profileManager.SetGamePath(value))
                 {
-                    AppConfig.GamePath = string.Empty;
-                    _isGamePathValid = false;
-                }
-                else if (!ProfileManager.IsValidGamePath(value))
-                {
-                    AppConfig.GamePath = string.Empty;
-                    _isGamePathValid = false;
+                    _ = new MessageBoxFactory()
+                        .Icon(MessageBoxIconType.Error)
+                        .Title("Error")
+                        .Message("The selected path does not lead to a valid installation of APB: Reloaded.")
+                        .Button("OK", true, true)
+                        .Show(_window);
                 }
                 else
                 {
-                    AppConfig.GamePath = value;
                     _isGamePathValid = true;
                 }
 
@@ -126,53 +125,61 @@ namespace APBConfigManager.UI.ViewModels
             }
         }
 
-        private ObservableCollection<ProfileModel> _profiles =
-            new ObservableCollection<ProfileModel>();
 
-        public ObservableCollection<ProfileModel> Profiles
+        public Profile SelectedProfile
         {
             get
             {
-                return _profiles;
+                return _profileManager.GetProfileById(_profileManager.ActiveProfile);
             }
 
             set
             {
-                _profiles = value;
-                OnPropertyChanged();
-            }
-        }
+                if (IsExecutableRunning(AppConfig.GamePath))
+                {
+                    _ = new MessageBoxFactory()
+                        .Icon(MessageBoxIconType.Error)
+                        .Title("Error")
+                        .Message("Cannot switch profile while APB is running!")
+                        .Button("Abort", true, true)
+                        .Show(_window);
+                }
+                else if (value == null)
+                {
+                    _profileManager.MakeProfileActive(_profileManager.ActiveProfile);
+                }
+                else
+                {
+                    _profileManager.MakeProfileActive(value.Id);
+                }
 
-
-        private ProfileModel? _selectedProfile;
-
-        public ProfileModel? SelectedProfile
-        {
-            get
-            {
-                return _selectedProfile;
-            }
-
-            set
-            {
-                _selectedProfile = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CanEditSelectedProfile));
-                OnPropertyChanged(nameof(WindowTitle));
             }
         }
 
-        public MainViewModel(Window window)
+        public FullyObservableCollection<Profile> Profiles
+        {
+            get
+            {
+                return _profileManager.Profiles;
+            }
+        }
+
+        public MainViewModel(Window window, ProfileManager profileManager)
         {
             StatusText = "Initializing...";
             IsBusy = true;
 
             _window = window;
+            _profileManager = profileManager;
 
-            foreach (Profile profile in ProfileManager.Instance.Profiles)
+            _profileManager.Profiles.CollectionChanged += (sender, e) =>
             {
-                _profiles.Add(new ProfileModel(profile));
-            }
+                // why are you not updating you silly dum dum code
+                Debug.WriteLine("CollectionChanged on _profileManager.Profiles");
+                OnPropertyChanged(nameof(Profiles));
+            };
 
             GamePath = AppConfig.GamePath;
 
@@ -189,24 +196,6 @@ namespace APBConfigManager.UI.ViewModels
             // this warning is kind of annoying though.
             // Todo: Fix?
             GamePath = result;
-
-            // Create backup profile if one does not exist
-            if (ProfileManager.Instance.GetProfilesByName("Backup").Count == 0)
-            {
-                Profile backup = ProfileManager.Instance.CreateProfile("Backup", string.Empty, true);
-                ProfileModel model = new ProfileModel("Backup", string.Empty, true);
-                _profiles.Add(model);
-
-                ProfileManager.Instance.CopyGameConfigToProfile(backup.id);
-
-                // Files backed up, its safe to delete them for a symlink
-                Directory.Delete(AppConfig.GameConfigDirPath, true);
-
-                ProfileManager.Instance.ActivateProfile(backup.id);
-
-                SelectedProfile = model;
-                AppConfig.ActiveProfile = backup.id.ToString();
-            }
         }
 
         public void OnCreateProfileCommand()
@@ -216,17 +205,15 @@ namespace APBConfigManager.UI.ViewModels
 
             string newProfileName = "New Profile";
             int newProfileCount = 1;
-            while (ProfileManager.Instance.GetProfilesByName(newProfileName).Count > 0)
+            while (_profileManager.DoesProfileByNameExist(newProfileName))
             {
                 newProfileName = $"New Profile ({newProfileCount})";
                 newProfileCount++;
             }
 
-            Profile profile = ProfileManager.Instance.CreateProfile(newProfileName);
-            ProfileModel profileModel = new ProfileModel(profile);
-            Profiles.Add(profileModel);
+            Guid profileId = _profileManager.CreateProfile(newProfileName);
 
-            ProfileManager.Instance.CopyGameConfigToProfile(profile.id);
+            _profileManager.CopyGameConfigToProfile(profileId);
 
             IsBusy = false;
         }
@@ -240,7 +227,10 @@ namespace APBConfigManager.UI.ViewModels
             string? path = await dialog.ShowAsync(_window);
 
             if (path == null)
+            {
+                IsBusy = false;
                 return;
+            }
 
             if (path == GamePath)
             {
@@ -265,11 +255,13 @@ namespace APBConfigManager.UI.ViewModels
 
             try
             {
-                Profile profile = ProfileManager.Instance.ImportProfile(path, shouldDelete);
-                ProfileModel profileModel = new ProfileModel(profile);
-                Profiles.Add(profileModel);
+                Guid profileId = _profileManager.ImportProfile(path, shouldDelete);
+
+                Profile profile = _profileManager.GetProfileById(profileId);
+
+                _profileManager.Profiles.Add(profile);
             }
-            catch (InvalidGamePathException) 
+            catch 
             {
                 await new MessageBoxFactory()
                     .Title("ERROR")
@@ -285,73 +277,18 @@ namespace APBConfigManager.UI.ViewModels
             IsBusy = false;
         }
 
-        public async void OnDeleteProfileCommand()
+        public void OnDeleteProfileCommand()
         {
-            if (SelectedProfile == null)
-                return;
-
-            if (SelectedProfile.Id == Guid.Parse(AppConfig.ActiveProfile))
-            {
-                await new MessageBoxFactory()
-                    .Title("ERROR")
-                    .Message("Deleting the active profile is not allowed!\nActivate a different profile and try again.")
-                    .Icon(MessageBoxIconType.Error)
-                    .Button("OK")
-                    .Show(_window);
-
-                return;
-            }
-
             IsBusy = true;
             StatusText = "Deleting profile...";
 
-            ProfileManager.Instance.DeleteProfile(SelectedProfile.Id);
-
-            int deletedIndex = Profiles.IndexOf(SelectedProfile);
-            Profiles.Remove(SelectedProfile);
-
-            if (deletedIndex < Profiles.Count)
-                SelectedProfile = Profiles[deletedIndex];
-            else
-                SelectedProfile = Profiles[Profiles.Count - 1];
-
-            IsBusy = false;
-        }
-
-        public void OnSaveProfileCommand()
-        {
-            if (SelectedProfile == null)
-                return;
-
-            IsBusy = true;
-            StatusText = "Saving profile...";
-
-            ProfileManager.Instance.UpdateProfile(SelectedProfile.Profile);
-            SelectedProfile.IsDirty = false;
-
-            IsBusy = false;
-        }
-
-        public void OnActivateProfileCommand()
-        {
-            if (SelectedProfile == null)
-                return;
-
-            IsBusy = true;
-            StatusText = "Activating profile...";
-
-            ProfileManager.Instance.ActivateProfile(SelectedProfile.Id);
-
-            OnPropertyChanged(nameof(WindowTitle));
+            _profileManager.DeleteProfile(SelectedProfile.Id);
 
             IsBusy = false;
         }
 
         public async void OnCreateProfileShortcutCommand()
         {
-            if (SelectedProfile == null)
-                return;
-
             IsBusy = true;
             StatusText = "Creating shortcut...";
 
@@ -369,7 +306,7 @@ namespace APBConfigManager.UI.ViewModels
                 return;
             }
 
-            ProfileManager.Instance.CreateDesktopShortcutForProfile(SelectedProfile.Id, result);
+            _profileManager.CreateProfileShortcut(SelectedProfile.Id, result);
 
             IsBusy = false;
         }
@@ -381,13 +318,8 @@ namespace APBConfigManager.UI.ViewModels
 
         public void OnOpenProfileDirInExplorerCommand()
         {
-            if (SelectedProfile == null)
-                throw new ProfileNotFoundException(
-                    "An attempt was made to open the directory of the " +
-                    "currently selected profile but no profile is selected");
-
-            string path = ProfileManager.Instance
-                .GetProfileDirById(SelectedProfile.Id);
+            string path = _profileManager
+                .GetProfileConfigDirectory(SelectedProfile.Id);
 
             OpenInExplorer(path);
         }
@@ -395,10 +327,10 @@ namespace APBConfigManager.UI.ViewModels
         public async void OnRunAdvLauncherCommand()
         {
             ProcessStartInfo startInfo = new ProcessStartInfo();
-            startInfo.FileName = AppConfig.AdvLauncherExecutablePath;
+            startInfo.FileName = AppConfig.AbsAdvLauncherExePath;
             startInfo.WorkingDirectory = GamePath;
 
-            if (IsExecutableRunning(AppConfig.AdvLauncherExecutablePath))
+            if (IsExecutableRunning(AppConfig.AbsAdvLauncherExePath))
             {
                 await new MessageBoxFactory()
                     .Title("ERROR")
@@ -415,11 +347,8 @@ namespace APBConfigManager.UI.ViewModels
 
         public async void OnRunAPBCommand()
         {
-            if (SelectedProfile == null)
-                return;
-
             // If an instance of APB is already running, abort and inform
-            if (IsExecutableRunning(AppConfig.GameExecutableFilepath))
+            if (IsExecutableRunning(AppConfig.AbsGameExeFilepath))
             {
                 var messageBox = MessageBox.Avalonia.MessageBoxManager
                     .GetMessageBoxStandardWindow("ERROR", "An instance APB: Reloaded is already running.");
@@ -436,7 +365,7 @@ namespace APBConfigManager.UI.ViewModels
                 return;
             }
 
-            ProfileManager.Instance.RunGameWithProfile(SelectedProfile.Id);
+            _profileManager.RunGameWithProfile(SelectedProfile.Id);
         }
 
         private void OpenInExplorer(string path)
