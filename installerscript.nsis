@@ -19,7 +19,7 @@ Unicode True
 
 !define MUI_ABORTWARNING
 
-OutFile "NSIS Output\APBConfigManager-v1.0.0-installer.exe"
+OutFile "NSIS Output\apb-config-manager-setup.exe"
 
 InstallDir "$PROGRAMFILES64\APB Config Manager"
 
