@@ -1,7 +1,7 @@
 <h1 align="center">APB Config Manager</h1>
 
 <p align="center">
-After years of tediously switching between multiple APB configs manually, I decided to throw together this overcooked spaghetti of a codebase out of frustration in order to make managing and switching between configurations in APB a little bit smoother.
+After years of tediously switching between multiple APB configs manually, I decided to throw together this overcooked spaghetti of a codebase out of frustration in order to make managing and switching between configurations in APB a little bit smoother. I created this project mostly for myself, but I figured I might as well release it on here in case anyone else is interested in using it. :)
 </p>
 
 <p align="center"><a href="https://github.com/imxela/apb-config-manager/releases/latest/download/apb-config-manager-setup.exe">Download Latest Version</a></p>
