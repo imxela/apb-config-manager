@@ -1,4 +1,4 @@
-# APB Config Manager
+<h1 align="center">APB Config Manager</h1>
 
 <p align="center">
 After years of tediously switching between multiple APB configs manually, I decided to throw together this overcooked spaghetti of a codebase out of frustration in order to make managing and switching between configurations in APB a little bit smoother.
@@ -45,12 +45,12 @@ Refer to sections 7 and 8 of the [LICENSE file](LICENSE). ^-^
 
 <br>
 
-This project is licensed under the Apache License 2.0. See the [LICENSE file](LICENSE) for more information.
+<p align="center">This project is licensed under the Apache License 2.0. See the <a href="LICENSE">LICENSE file</a> for more information</p>
 
 <br>
 
 ---
 
-### ***DISCLAIMER***
+<h3 align="center"><bold><i>DISCLAIMER</i></bold></h3>
 
-*I am in no way affiliated with Little Orbit or APB: Reloaded, and this software has not been officially approved. Although it should be perfectly legal in theory, you are using it at your own risk in practice. I am also not affiliated with the creator(s) of APB Advanced Launcher.*
+<p align="center">I am in no way affiliated with Little Orbit or APB: Reloaded, and this software has not been officially approved. Although it should be perfectly legal in theory, you are using it at your own risk in practice. I am also not affiliated with the creator(s) of APB Advanced Launcher.</p>
