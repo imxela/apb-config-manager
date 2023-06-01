@@ -259,7 +259,6 @@ namespace APBConfigManager.UI.ViewModels
 
                 Profile profile = _profileManager.GetProfileById(profileId);
 
-                _profileManager.Profiles.Add(profile);
             }
             catch 
             {
