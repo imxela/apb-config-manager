@@ -277,10 +277,24 @@ namespace APBConfigManager.UI.ViewModels
             IsBusy = false;
         }
 
-        public void OnDeleteProfileCommand()
+        public async void OnDeleteProfileCommand()
         {
             IsBusy = true;
             StatusText = "Deleting profile...";
+
+            string result = await new MessageBoxFactory()
+                .Title("Delete?")
+                .Message($"Are you sure you want to delete the '{SelectedProfile.Name}' profile?")
+                .Icon(MessageBoxIconType.Question)
+                .Button("No", true, true)
+                .Button("Yes")
+                .Show(_window);
+
+            if (result != "Yes")
+            {
+                IsBusy = false;
+                return;
+            }
 
             _profileManager.DeleteProfile(SelectedProfile.Id);
 
