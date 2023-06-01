@@ -255,10 +255,17 @@ namespace APBConfigManager.UI.ViewModels
 
             try
             {
+                // Retrieve directory name to use as profile name
+                string? newProfileName = path.Substring(path.LastIndexOf('\\') + 1);
+                ArgumentNullException.ThrowIfNull(newProfileName);
+
+                Debug.WriteLine("newProfileName: " + newProfileName + " for path: " + path);
+
                 Guid profileId = _profileManager.ImportProfile(path, shouldDelete);
 
                 Profile profile = _profileManager.GetProfileById(profileId);
 
+                profile.Name = newProfileName;
             }
             catch 
             {
