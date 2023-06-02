@@ -4,11 +4,13 @@ Name "APB Config Manager v1.0.0"
 Unicode True
 
 !insertmacro MUI_PAGE_LICENSE "LICENSE"
+!insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_COMPONENTS
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_UNPAGE_FINISH
 
@@ -34,13 +36,13 @@ Section
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
     # Start-menu shortcut
-    CreateShortcut "$SMPROGRAMS\APB Config Manager.lnk" "$INSTDIR\APBConfigManager.UI.exe"
+    # CreateShortcut "$SMPROGRAMS\APB Config Manager.lnk" "$INSTDIR\APBConfigManager.UI.exe"
 
     # Desktop shortcut
-    CreateShortcut "$DESKTOP\APB Config Manager.lnk" "$INSTDIR\APBConfigManager.UI.exe"
+    # CreateShortcut "$DESKTOP\APB Config Manager.lnk" "$INSTDIR\APBConfigManager.UI.exe"
 
     # Uninstaller start-menu shortcut
-    CreateShortcut "$SMPROGRAMS\Uninstall APB Config Manager.lnk" "$INSTDIR\uninstall.exe"
+    # CreateShortcut "$SMPROGRAMS\Uninstall APB Config Manager.lnk" "$INSTDIR\uninstall.exe"
 
     # Add uninstall information to Add/Remove Programs
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\APBConfigManager" \
@@ -60,8 +62,21 @@ Section
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\APBConfigManager" \
                 "DisplayVersion" "v1.0.0"
 SectionEnd
+
+Section /o "Desktop Shortcut"
+    # Application desktop shortcut
+    CreateShortcut "$DESKTOP\APB Config Manager.lnk" "$INSTDIR\APBConfigManager.UI.exe"
+SectionEnd
+
+Section "Start-Menu Shortcut"
+    # Application start-menu shortcut
+    CreateShortcut "$SMPROGRAMS\APB Config Manager.lnk" "$INSTDIR\APBConfigManager.UI.exe"
+
+    # Uninstaller start-menu shortcut
+    CreateShortcut "$SMPROGRAMS\Uninstall APB Config Manager.lnk" "$INSTDIR\uninstall.exe"
+SectionEnd
  
-Section "uninstall"
+Section "-Uninstall"
     ExecWait '"$INSTDIR\APBConfigManager.UI.exe" --unlink'
 
     Delete "$SMPROGRAMS\APB Config Manager.lnk"
@@ -75,4 +90,8 @@ Section "uninstall"
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\APBConfigManager"
 
     RMDir $INSTDIR
+SectionEnd
+
+Section /o "un.Delete User Data"
+    RMDir /r "$APPDATA\APBConfigManager\"
 SectionEnd
