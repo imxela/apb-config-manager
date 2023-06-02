@@ -62,6 +62,8 @@ Section
 SectionEnd
  
 Section "uninstall"
+    ExecWait '"$INSTDIR\APBConfigManager.UI.exe" --unlink'
+
     Delete "$SMPROGRAMS\APB Config Manager.lnk"
     Delete "$SMPROGRAMS\Uninstall APB Config Manager.lnk"
     Delete "$DESKTOP\APB Config Manager.lnk"

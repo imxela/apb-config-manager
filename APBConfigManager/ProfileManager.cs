@@ -15,7 +15,6 @@ public class ProfileManager
         }
     }
 
-    // Todo: Pass AppConfig to constructor?
     public ProfileManager()
     {
         Profiles = new FullyObservableCollection<Profile>();
@@ -32,6 +31,16 @@ public class ProfileManager
         };
 
         CreateBackupProfile();
+
+        // This should only ever happen if the application was uninstalled
+        // and then reinstalled. Uninstalling replaces the symlink with a
+        // normal directory but keeps the app config files. As such,
+        // I have to recreate/relink it here.
+        if (!FileUtils.IsSymlink(AppConfig.AbsGameConfigDir))
+        {
+            // Triggers the symlink the be recreated
+            MakeProfileActive(ActiveProfile);
+        }
     }
 
     /// <summary>
@@ -191,9 +200,7 @@ public class ProfileManager
     /// profile.
     /// </summary>
     /// <exception cref="InvalidOperationException">
-    /// If the APB config directory isn't a symbolic link it means that the
-    /// original config files may not have been backed up properly. Rather
-    /// than overwriting the files, an InvalidOperationException is thrown.
+    /// Thrown if the config directory isn't symlinked and no backup exists.
     /// </exception>
     /// <exception cref="ArgumentException">
     /// Thrown if no profile corresponding to the given GUID exists.
@@ -212,17 +219,20 @@ public class ProfileManager
         {
             Directory.Delete(AppConfig.AbsGameConfigDir, true);
         }
-        // The directory should always be symlinked - throw an exception
-        else
+        else if (Directory.Exists(AppConfig.AbsGameConfigDir))
         {
-            // When APBConfigManager runs for the first time, the game
-            // configuration files are copied to a Backup profile which 
-            // the game config directory is then symlinked to.
-            // This means that something has gone very wrong if it isn't
-            // symlinked at this point, and in order to not jeopardize
-            // the users configuration files, we throw an exception here.
-            // throw new InvalidOperationException(
-            //     "Expected a directory but found a symlink.");
+            // Sanity check: Make sure the backup exists before deleting
+            // the game's config directory.
+            if (!DoesProfileByNameExist("Backup"))
+            {
+                throw new InvalidOperationException("Attempted to activate a" +
+                    " profile when no previous symlink existed, while also " +
+                    "not having any backup profile. Aborting to prevent " +
+                    "loss of data.");
+            }
+
+            // Should be safe to delete if we have a backup
+            Directory.Delete(AppConfig.AbsGameConfigDir, true);
         }
 
         Directory.CreateSymbolicLink(
@@ -333,7 +343,7 @@ public class ProfileManager
         }
 
         shortcut.TargetPath = targetPath;
-        shortcut.Arguments = id.ToString();
+        shortcut.Arguments = "--run " + id.ToString();
         shortcut.Save();
     }
 
