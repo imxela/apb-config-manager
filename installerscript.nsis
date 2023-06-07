@@ -1,6 +1,6 @@
 !include "MUI2.nsh"
 
-Name "APB Config Manager v1.0.0"
+Name "APB Config Manager v2.0.0"
 Unicode True
 
 !insertmacro MUI_PAGE_LICENSE "LICENSE"
@@ -16,7 +16,7 @@ Unicode True
 
 !insertmacro MUI_LANGUAGE "English"
 
-!define MUI_PAGE_HEADER_TEXT "APB Config Manager v1.0.0"
+!define MUI_PAGE_HEADER_TEXT "APB Config Manager v2.0.0"
 !define MUI_PAGE_HEADER_SUBTEXT "Installation Wizard"
 
 !define MUI_ABORTWARNING
@@ -60,7 +60,7 @@ Section
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\APBConfigManager" \
                 "URLInfoAbout" "https://github.com/imxela/apb-config-manager"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\APBConfigManager" \
-                "DisplayVersion" "v1.0.0"
+                "DisplayVersion" "v2.0.0"
 SectionEnd
 
 Section /o "Desktop Shortcut"

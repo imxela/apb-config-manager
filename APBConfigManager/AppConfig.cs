@@ -37,7 +37,7 @@ namespace APBConfigManager
         [JsonProperty]
         public Guid _activeProfile = Guid.Empty;
 
-        public const string APP_VERSION = "v1.0.0";
+        public const string APP_VERSION = "v2.0.0";
 
         public static string AppDataPath
         {
