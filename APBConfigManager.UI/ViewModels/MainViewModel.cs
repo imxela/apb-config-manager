@@ -213,7 +213,34 @@ namespace APBConfigManager.UI.ViewModels
 
             Guid profileId = _profileManager.CreateProfile(newProfileName);
 
-            _profileManager.CopyGameConfigToProfile(profileId);
+            Guid backupProfileId = _profileManager.GetProfileByName("Backup").Id;
+            _profileManager.CopyProfileConfig(backupProfileId, profileId);
+
+            IsBusy = false;
+        }
+
+        public void OnDuplicateProfileCommand()
+        {
+            IsBusy = true;
+            StatusText = "Duplicating Profile...";
+
+            string duplicateProfileName = SelectedProfile.Name;
+            int duplicateProfileCount = 1;
+            while (_profileManager.DoesProfileByNameExist(duplicateProfileName))
+            {
+                duplicateProfileName = $"{duplicateProfileName} ({duplicateProfileCount})";
+                duplicateProfileCount++;
+            }
+
+            Guid profileId = _profileManager.CreateProfile(duplicateProfileName);
+
+            // Todo: This is probably not a good way to copy the game args over
+            //       It would probably be better to add a Copy trait to the 
+            //       Profile Model, or alternatively to have a DuplicateProfile
+            //       method in ProfileManager.
+            _profileManager.GetProfileById(profileId).GameArgs = SelectedProfile.GameArgs;
+
+            _profileManager.CopyProfileConfig(SelectedProfile.Id, profileId);
 
             IsBusy = false;
         }

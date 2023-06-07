@@ -125,7 +125,13 @@
             
             <Button Content="Create Profile"
                     Command="{Binding OnCreateProfileCommand}"
-                    ToolTip.Tip="Create a new profile based on the current target APB configuration files."
+                    ToolTip.Tip="Create a new profile based on the configuration files of the backup profile."
+                    Margin="0 0 10 0"
+                    IsEnabled="{Binding IsGamePathValid}"/>
+
+            <Button Content="Duplicate Profile"
+                    Command="{Binding OnDuplicateProfileCommand}"
+                    ToolTip.Tip="Create a new profile based on the currently selected profile's configuration files."
                     Margin="0 0 10 0"
                     IsEnabled="{Binding IsGamePathValid}"/>
             

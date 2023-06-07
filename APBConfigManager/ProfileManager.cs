@@ -285,6 +285,50 @@ public class ProfileManager
 
             File.Copy(file, profileFilePath, true);
         }
+
+        Debug.WriteLine($"Successfully copied game configuration to {id}");
+    }
+
+    /// <summary>
+    /// Copies the configuration files corresponding to the source profile and
+    /// writes them to the target profile.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown if the source or target profile GUIDs do not correspond to an
+    /// existing profile.
+    /// </exception>
+    public void CopyProfileConfig(Guid source, Guid target)
+    {
+        if (!DoesProfileByIdExist(source))
+        {
+            throw new ArgumentException(
+                "Could not copy profile because no profile associated" +
+                "with the given source GUID exists.");
+        }
+        else if (!DoesProfileByIdExist(target))
+        {
+            throw new ArgumentException(
+                "Could not copy profile because no profile associated" +
+                "with the given target GUID exists.");
+        }
+
+
+        string sourcePath = GetProfileConfigDirectory(source);
+        string targetPath = GetProfileConfigDirectory(target);
+
+        string[] files = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories);
+
+        foreach (string file in files)
+        {
+            string relativeFilePath = Path.GetRelativePath(sourcePath, file);
+            string targetFinalFilePath = targetPath + "\\" + relativeFilePath;
+
+            new FileInfo(targetFinalFilePath).Directory?.Create();
+
+            File.Copy(file, targetFinalFilePath, true);
+        }
+
+        Debug.WriteLine($"Successfully copied profile configuration from {source} to {target}");
     }
 
     /// <summary>
