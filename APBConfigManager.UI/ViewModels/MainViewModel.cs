@@ -5,6 +5,10 @@ using System.IO;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using Newtonsoft.Json;
+using System.Threading.Tasks;
 
 namespace APBConfigManager.UI.ViewModels
 {
@@ -183,7 +187,17 @@ namespace APBConfigManager.UI.ViewModels
 
             GamePath = AppConfig.GamePath;
 
+            _window.Opened += OnWindowOpened;
+
             IsBusy = false;
+        }
+
+        private async void OnWindowOpened(object? sender, EventArgs e)
+        {
+            if (await CheckForUpdate())
+            {
+                Environment.Exit(0);
+            }
         }
 
         public async void OnLocateCommand()
@@ -424,6 +438,87 @@ namespace APBConfigManager.UI.ViewModels
         {
             string processName = Path.GetFileNameWithoutExtension(path);
             return Process.GetProcessesByName(processName).Length > 0;
+        }
+
+        /// <summary>
+        /// Checks and prompts the user to download a new update if one is
+        /// available. Returns true if the user agree'd to download the update
+        /// and false if they denied or if no new update is available.
+        /// </summary>
+        private async Task<bool> CheckForUpdate()
+        {
+            string currentVersion = AppConfig.APP_VERSION;
+            string latestVersion = GetLatestReleaseVersion();
+
+            // The latest version will either be the same as the current one
+            // or newer, so there is no need to check the actual version numbers.
+            if (currentVersion != latestVersion)
+            {
+                string result = await new MessageBoxFactory()
+                    .Title("Update Available")
+                    .Icon(MessageBoxIconType.Info)
+                    .Message($"A new update is available! Would you like to close APB Config Manager and download it in your browser now?\n\nCurrent version: {currentVersion}\nNew version: {latestVersion}")
+                    .Button("Yes", true)
+                    .Button("No", false, true)
+                    .Show(_window);
+
+                if (result != "Yes")
+                {
+                    return false;
+                }
+
+                string downloadUrl = "https://github.com/imxela/apb-config-manager/releases/latest/download/apb-config-manager-setup.exe";
+
+                Process.Start(new ProcessStartInfo(downloadUrl) { 
+                    UseShellExecute = true 
+                });
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Returns the version string in the format (vMAJOR.MINOR.PATCH)
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="HttpRequestException">
+        /// Thrown if the HTTP requerst to GitHub's API failed for any reason.
+        /// </exception>
+        /// <exception cref="Exception">
+        /// Thrown if the JSON response from GitHub was unable to be parsed.
+        /// </exception>
+        private string GetLatestReleaseVersion()
+        {
+            string requestUrl = "http://api.github.com/repos/imxela/apb-config-manager/releases/latest";
+            HttpClient client = new HttpClient();
+            client.BaseAddress = new Uri(requestUrl);
+
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+
+            client.DefaultRequestHeaders.UserAgent.Add(
+                new ProductInfoHeaderValue("APBConfigManager", AppConfig.APP_VERSION));
+
+            client.DefaultRequestHeaders.UserAgent.Add(
+                new ProductInfoHeaderValue("(+https://github.com/imxela/apb-config-manager)"));
+
+            HttpResponseMessage httpResponse = client.GetAsync(requestUrl).Result;
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException("Failed to retrieve latest version information from the GitHub API.");
+            }
+
+            string responseStream = httpResponse.Content.ReadAsStringAsync().Result;
+
+            dynamic? response = JsonConvert.DeserializeObject(responseStream);
+            if (response == null)
+            {
+                throw new Exception("Failed to parse GitHub API JSON data.");
+            }
+
+            return response.tag_name;
         }
     }
 }
